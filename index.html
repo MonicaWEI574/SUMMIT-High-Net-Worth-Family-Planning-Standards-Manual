@@ -34,7 +34,7 @@
             overflow: hidden;
             font-family: 'Noto Serif TC', serif;
             color: #334155;
-            touch-action: pan-y; /* 防止行動端意外雙擊縮放 */
+            /* 移除 touch-action，防止在部分 iOS 設備上鎖死滾動 */
         }
 
         /* 滾動條美化 */
@@ -54,35 +54,18 @@
             overflow: hidden;
         }
 
-        /* 行動端頁面樣式：乾淨的卡片式連續滾動 */
-        .mobile-card {
-            background-color: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-            margin-bottom: 24px;
-            overflow: hidden;
-            border: 1px solid #e2e8f0;
-        }
-        .mobile-card-cover {
-            background-color: #0f172a;
-            background-image: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            color: #D4AF37;
-            border: 1px solid #D4AF37;
-        }
+        /* 行動端頁面樣式 */
         .mobile-page-inner {
-            padding: 24px 20px;
-            line-height: 1.6;
-            color: #334155;
+            padding: 40px 24px;
+            font-size: 1.1rem;
+            line-height: 1.7;
         }
-        /* 縮小 Tailwind 原有的大字體以適應手機 */
-        .mobile-page-inner .text-xs { font-size: 0.85rem; }
-        .mobile-page-inner .text-sm { font-size: 0.95rem; }
-        .mobile-page-inner .text-base { font-size: 1rem; }
-        .mobile-page-inner .text-lg { font-size: 1.1rem; }
-        .mobile-page-inner .text-xl { font-size: 1.25rem; }
-        .mobile-page-inner .text-2xl { font-size: 1.4rem; }
-        .mobile-page-inner .text-3xl { font-size: 1.6rem; }
-        .mobile-page-inner .text-4xl { font-size: 1.8rem; }
+        .mobile-page-inner .text-xs { font-size: 0.95rem; }
+        .mobile-page-inner .text-sm { font-size: 1.05rem; }
+        .mobile-page-inner .text-base { font-size: 1.15rem; }
+        .mobile-page-inner .text-lg { font-size: 1.25rem; }
+        .mobile-page-inner .text-xl { font-size: 1.4rem; }
+        .mobile-page-inner .text-2xl { font-size: 1.6rem; }
         .mobile-page-inner h2 { margin-bottom: 1rem; }
         .mobile-page-inner h4 { margin-bottom: 0.5rem; }
         .mobile-page-inner p, .mobile-page-inner li { margin-bottom: 0.75rem; }
@@ -245,7 +228,7 @@
         }
     </style>
 </head>
-<body class="antialiased flex h-screen w-screen overflow-hidden">
+<body class="antialiased flex h-[100dvh] w-[100dvw] overflow-hidden">
 
     <!-- 音效 -->
     <audio id="flip-sound" src="https://assets.mixkit.co/active_storage/sfx/2092/2092-preview.mp3" preload="auto"></audio>
@@ -293,9 +276,9 @@
         </div>
     </main>
 
-    <!-- 行動端主視覺區：優雅的卡片式連續滾動 -->
-    <main id="mobile-view" class="md:hidden flex-1 w-full h-full pt-20 pb-28 px-4 overflow-y-auto bg-slate-100 scroll-smooth">
-        <div id="mobile-pages-container" class="flex flex-col w-full max-w-md mx-auto">
+    <!-- 行動端主視覺區：上下滑動。移除 snap-y 避免 iOS 卡死計算 -->
+    <main id="mobile-view" class="md:hidden flex-1 w-full h-full pt-16 pb-24 overflow-y-auto bg-slate-900 scroll-smooth" style="-webkit-overflow-scrolling: touch;">
+        <div id="mobile-pages-container" class="flex flex-col w-full min-h-max">
             <!-- 手機版頁面將由 JS 動態生成 -->
         </div>
     </main>
@@ -727,22 +710,23 @@
                 bookEl.appendChild(sheet);
             }
 
-            // 行動端：連續滾動卡片
+            // 行動端：上下滑動卡片
             if (mobileContainer) {
                 for (let i = 0; i < totalPages; i++) {
                     const mobilePage = document.createElement('div');
                     mobilePage.id = `mobile-page-${i}`;
+                    // 移除強制 CSS scroll-snap 對齊，並使用 100dvh 確保高度適應各種手機（解決 iOS 滾動卡死問題）
+                    mobilePage.className = 'w-full bg-[#fcfaf5] relative border-b-[12px] border-slate-900 shadow-2xl';
+                    mobilePage.style.minHeight = 'calc(100dvh - 10rem)';
                     
                     const data = bookData[i];
                     let contentHTML = '';
                     if (data.type === 'cover') {
-                        mobilePage.className = 'mobile-card mobile-card-cover';
-                        contentHTML = `<div class="w-full py-16 flex flex-col items-center justify-center px-6 text-center relative">${data.html}</div>`;
+                        contentHTML = `<div class="w-full h-full min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-6 bg-slate-900 text-summit-gold text-center relative">${data.html}</div>`;
                     } else {
-                        mobilePage.className = 'mobile-card';
-                        contentHTML = `<div class="mobile-page-inner w-full relative pb-12">
+                        contentHTML = `<div class="mobile-page-inner w-full min-h-full relative pb-20">
                             ${data.html}
-                            <div class="absolute bottom-4 left-0 w-full text-center text-xs text-slate-400 font-serif">- 頁碼 ${i} -</div>
+                            <div class="absolute bottom-6 left-0 w-full text-center text-sm text-slate-400 font-serif">- ${i} -</div>
                         </div>`;
                     }
                     mobilePage.innerHTML = contentHTML;
@@ -775,15 +759,18 @@
                 mobileView.addEventListener('scroll', () => {
                     if (isScrollingProgrammatically) return;
                     
+                    // 找出當前最靠近頂部的頁面
                     let currentIdx = currentPage;
                     let minDistance = Infinity;
-                    const viewScrollTop = mobileView.scrollTop;
                     
                     for (let i = 0; i < totalPages; i++) {
                         const pageEl = document.getElementById(`mobile-page-${i}`);
                         if (pageEl) {
-                            // 元素頂部距離絕對位置 - 容器捲動量 - 導航欄保留空間
-                            const distance = Math.abs((pageEl.offsetTop - 80) - viewScrollTop);
+                            // 距離容器頂部的距離
+                            const rect = pageEl.getBoundingClientRect();
+                            // offsetTop 是相對於文檔，getBoundingClientRect 是相對於視口。
+                            // mobile-view top 是 64px (header height).
+                            const distance = Math.abs(rect.top - 64); 
                             if (distance < minDistance) {
                                 minDistance = distance;
                                 currentIdx = i;
@@ -872,12 +859,10 @@
             
             if (window.innerWidth < 768) {
                 const target = document.getElementById(`mobile-page-${pageIndex}`);
-                const mobileView = document.getElementById('mobile-view');
-                if (target && mobileView) {
+                if (target) {
                     isScrollingProgrammatically = true;
-                    // 計算目標元素相對於滾動容器頂部的精確距離，並扣除頂部導航欄空間
-                    const y = target.offsetTop - 80;
-                    mobileView.scrollTo({ top: y, behavior: 'smooth' });
+                    // 使用 scrollIntoView 進行平滑滾動
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     // 釋放滾動鎖定
                     setTimeout(() => isScrollingProgrammatically = false, 600);
                 }
