@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUMMIT 高淨值家族規劃標準手冊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        summit: {
+                            dark: '#0f172a',
+                            gold: '#D4AF37',
+                            lightgold: '#F3E5AB',
+                            gray: '#f8fafc',
+                            text: '#334155'
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['"Noto Serif TC"', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0f172a;
+            background-image: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            overflow: hidden;
+            font-family: 'Noto Serif TC', serif;
+            color: #334155;
+        }
+
+        /* 滾動條美化 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(212, 175, 55, 0.6); }
+
+        /* 書籍 3D 容器 */
+        #scene {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 2000px; /* 3D 視角深度 */
+        }
+
+        #book {
+            position: relative;
+            width: 1200px; /* 增加展開總寬度 (原本 900) */
+            height: 800px; /* 增加書本高度 (原本 600) */
+            transform-style: preserve-3d;
+            transition: transform 0.5s ease;
+        }
+
+        /* 單張紙 (包含正反兩面) */
+        .sheet {
+            position: absolute;
+            width: 50%;
+            height: 100%;
+            top: 0;
+            right: 0;
+            transform-origin: left center;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.645, 0.045, 0.355, 1);
+            cursor: pointer;
+        }
+
+        /* 紙張的面 */
+        .face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            backface-visibility: hidden;
+            background-color: #fcfaf5;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.02);
+            overflow: hidden;
+        }
+
+        .face.front {
+            transform: rotateY(0deg);
+            border-radius: 0 8px 8px 0;
+            /* 右側頁面的中縫陰影 */
+            background-image: linear-gradient(to right, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 5%), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.05"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100" height="100" filter="url(%23n)"/></svg>');
+        }
+
+        .face.back {
+            transform: rotateY(180deg);
+            border-radius: 8px 0 0 8px;
+            /* 左側頁面的中縫陰影 */
+            background-image: linear-gradient(to left, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 5%), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.05"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100" height="100" filter="url(%23n)"/></svg>');
+        }
+
+        /* 封面/封底特殊樣式 */
+        .cover {
+            background-color: #1e293b;
+            background-image: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #D4AF37;
+            border: 2px solid #D4AF37;
+            box-shadow: 5px 5px 20px rgba(0,0,0,0.5);
+        }
+        .face.front.cover { border-left: none; }
+        .face.back.cover { border-right: none; }
+
+        /* 書頁翻動狀態 */
+        .sheet.flipped {
+            transform: rotateY(-180deg);
+        }
+
+        /* 內容排版 */
+        .page-content {
+            padding: 50px 60px; /* 配合較大書頁增加內邊距 */
+            height: 100%;
+            overflow-y: auto;
+            box-sizing: border-box;
+            position: relative;
+        }
+        
+        /* 隱藏滾動條但保持可滾動以維持美觀 */
+        .page-content::-webkit-scrollbar { display: none; }
+        .page-content { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 互動元素 */
+        .term-link {
+            color: #b45309;
+            border-bottom: 1px dashed #b45309;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        .term-link:hover { background-color: rgba(180, 83, 9, 0.1); }
+        
+        .case-btn {
+            display: inline-flex;
+            align-items: center;
+            background-color: #fef3c7;
+            color: #92400e;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #fcd34d;
+            margin-top: 8px;
+        }
+        .case-btn:hover { background-color: #fde68a; transform: translateY(-1px); }
+
+        .page-number {
+            position: absolute;
+            bottom: 25px;
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+        .face.front .page-number { right: 60px; }
+        .face.back .page-number { left: 60px; }
+
+        /* 側邊導航欄動畫 */
+        #sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        #sidebar.open { transform: translateX(0); }
+
+        /* 模態框動畫 */
+        #modal-backdrop {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #modal-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #modal-content {
+            transform: scale(0.95) translateY(10px);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #modal-backdrop.active #modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        /* 搜尋高亮 */
+        .highlight { background-color: rgba(212, 175, 55, 0.4); border-radius: 2px; }
+
+        @media (max-width: 768px) {
+            #sidebar { width: 80vw; }
+            .page-content { padding: 20px; }
+        }
+    </style>
+</head>
+<body class="antialiased flex h-screen w-screen overflow-hidden">
+
+    <!-- 音效 -->
+    <audio id="flip-sound" src="https://assets.mixkit.co/active_storage/sfx/2092/2092-preview.mp3" preload="auto"></audio>
+
+    <!-- 頂部導航/工具欄 -->
+    <header class="fixed top-0 left-0 right-0 h-16 bg-summit-dark/80 backdrop-blur-md border-b border-summit-gold/20 z-40 flex items-center justify-between px-4 sm:px-6 shadow-lg">
+        <div class="flex items-center gap-4">
+            <button onclick="toggleSidebar()" class="text-summit-gold hover:text-white transition p-2 rounded-lg hover:bg-white/10">
+                <i data-lucide="menu"></i>
+            </button>
+            <h1 class="text-summit-gold font-serif text-lg sm:text-xl font-bold tracking-wider hidden sm:block">SUMMIT 家族規劃手冊</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="relative hidden sm:block">
+                <input type="text" id="searchInput" placeholder="搜索章節或關鍵字..." class="bg-slate-800 text-sm text-white border border-slate-600 rounded-full pl-10 pr-4 py-1.5 focus:outline-none focus:border-summit-gold focus:ring-1 focus:ring-summit-gold w-64 transition-all">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+            </div>
+            <button onclick="toggleSound()" id="soundBtn" class="text-slate-400 hover:text-summit-gold transition p-2">
+                <i data-lucide="volume-2"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- 側邊目錄欄 -->
+    <aside id="sidebar" class="fixed top-0 left-0 h-full w-80 bg-slate-900 border-r border-slate-700 z-50 shadow-2xl flex flex-col pt-16">
+        <div class="p-6 flex-1 overflow-y-auto">
+            <h2 class="text-summit-gold text-lg font-bold mb-6 flex items-center gap-2">
+                <i data-lucide="list"></i> 完整目錄
+            </h2>
+            <nav id="toc-container" class="space-y-1 text-sm text-slate-300">
+                <!-- 目錄將由 JS 動態生成 -->
+            </nav>
+        </div>
+        <div class="p-4 border-t border-slate-700">
+            <button onclick="toggleSidebar()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white rounded transition flex justify-center items-center gap-2">
+                <i data-lucide="x" class="w-4 h-4"></i> 關閉目錄
+            </button>
+        </div>
+    </aside>
+
+    <!-- 主視覺區：3D 書本 -->
+    <main id="scene">
+        <div id="book">
+            <!-- 書頁將由 JS 動態生成 -->
+        </div>
+    </main>
+
+    <!-- 底部控制欄 -->
+    <footer class="fixed bottom-0 left-0 right-0 bg-summit-dark/90 backdrop-blur-md border-t border-summit-gold/20 z-40 p-3 sm:p-4 flex items-center justify-center sm:justify-between flex-wrap gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+        <div class="flex items-center gap-2 sm:gap-4">
+            <button onclick="goToSheet(0)" class="text-slate-400 hover:text-summit-gold p-2" title="回封面"><i data-lucide="chevrons-left"></i></button>
+            <button onclick="prevSheet()" class="bg-slate-800 hover:bg-slate-700 text-summit-gold border border-summit-gold/30 px-4 py-2 rounded flex items-center gap-2 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i> 上一頁</button>
+            <button onclick="nextSheet()" class="bg-summit-gold hover:bg-yellow-500 text-slate-900 font-bold px-4 py-2 rounded flex items-center gap-2 transition">下一頁 <i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+            <button onclick="goToSheet(totalSheets)" class="text-slate-400 hover:text-summit-gold p-2" title="至封底"><i data-lucide="chevrons-right"></i></button>
+        </div>
+        <div class="flex items-center gap-4 w-full sm:w-auto">
+            <span class="text-slate-400 text-sm hidden sm:inline whitespace-nowrap" id="page-indicator">進度: 0%</span>
+            <input type="range" id="progress-slider" min="0" max="100" value="0" class="w-full sm:w-48 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-summit-gold">
+        </div>
+    </footer>
+
+    <!-- 模態框 (名詞解釋/案例詳情) -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-black/80 z-[100] flex justify-center items-center p-4 backdrop-blur-sm" onclick="closeModal(event)">
+        <div id="modal-content" class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative" onclick="event.stopPropagation()">
+            <div class="bg-slate-900 p-4 flex justify-between items-center border-b border-summit-gold/30">
+                <h3 id="modal-title" class="text-summit-gold font-bold text-lg font-serif">標題</h3>
+                <button onclick="hideModal()" class="text-slate-400 hover:text-white transition"><i data-lucide="x"></i></button>
+            </div>
+            <div id="modal-body" class="p-6 text-slate-700 leading-relaxed font-serif text-sm sm:text-base max-h-[70vh] overflow-y-auto">
+                內容
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化圖標
+        lucide.createIcons();
+
+        // 知識庫與案例數據
+        const knowledgeBase = {
+            "A類：企業操盤型": "指以企業經營和資本運作爲核心的高淨值客戶。這類客戶通常面臨企業經營風險與個人/家族資產混同的痛點，需要強大的風險隔離與資本化升級方案。",
+            "家族信託": "一種財富管理架構，委託人將財產所有權轉移給受託人，由受託人按信託契約為指定受益人的利益進行管理和處分，具有資產隔離、稅務籌劃與定向傳承的功能。",
+            "家族憲章": "家族成員共同制定並遵守的『家族根本大法』，規範家族價值觀、家族企業治理規則、成員權利義務及衝突解決機制。",
+            "CRS": "共同申報準則 (Common Reporting Standard)，用於指導參與管轄區定期交換稅務居民財務帳戶信息的全球標準，對高淨值人士的跨境資產透明度產生重大影響。",
+            "SPV": "特殊目的實體 (Special Purpose Vehicle)，為特定業務目的或項目設立的法律實體，常應用於跨境投資架構與風險隔離設計中。"
+        };
+
+        const caseStudies = {
+            "案例A1": {
+                title: "案例A1：山東不良資產操盤手的跨境升級",
+                content: "<p class='mb-3'><strong>客戶背景：</strong>陳總，山東資深不良資產投資人，常年將大量高風險不良資產掛在個人或親屬名下，面臨極大的個人連帶負債風險與稅務隱患。</p><p class='mb-3'><strong>核心痛點：</strong>項目依賴性強，缺乏系統性平台；個人與企業風險高度混同。</p><p><strong>解決方案：</strong><br>1. 設立香港控股平台作為頂層架構。<br>2. 協助將內地分散的不良資產打包，發行私募特殊機會基金（母基金模式）。<br>3. 建立 WFOE (外商獨資企業) 進行境內業務控制。<br>4. 為其家族設立離岸信託，將家族安全資金與高風險業務徹底隔離，成功實現從『個人操盤』到『機構化資本平台』的升級。</p>"
+            },
+            "案例B2": {
+                title: "案例B2：多子女家族企業的股權平衡術",
+                content: "<p class='mb-3'><strong>客戶背景：</strong>江浙傳統製造業創始人，育有三名子女。長子參與經營，次子從事藝術，小女兒在海外定居。</p><p class='mb-3'><strong>核心痛點：</strong>如何將企業控制權平穩交接給長子，同時保障其他子女的經濟利益與心理平衡，避免未來爭產糾紛。</p><p><strong>解決方案：</strong><br>1. <strong>頂層重組：</strong>設立家族信託控股整個集團。<br>2. <strong>權利分離：</strong>長子獲得企業的『投票權/經營權』，次子與小女兒獲得信託分配的『收益權』。<br>3. <strong>家族憲章：</strong>制定明確的家族成員退出企業補償機制與分紅規則，成功化解潛在的代際與同輩衝突。</p>"
+            },
+            "案例C1": {
+                title: "案例C1：藝術收藏家的第二曲線規劃",
+                content: "<p class='mb-3'><strong>客戶背景：</strong>單身女企業家，已實現財富自由，熱愛當代藝術，擁有數十件高價值藝術藏品。</p><p class='mb-3'><strong>核心痛點：</strong>缺乏人生第二曲線的成就感；藝術品確權難、傳承難；擔憂未來的醫療照護與孤獨終老。</p><p><strong>解決方案：</strong><br>1. <strong>藝術品信託：</strong>設立專門的海外藝術品信託，將畫作確權並裝入信託架構。<br>2. <strong>生活方式資本化：</strong>協助其成立私人藝術基金與策展平台，將個人興趣轉化為具有社會影響力的事業。<br>3. <strong>意定監護與護理基金：</strong>在架構中內嵌長期照護條款與指定慈善捐贈路徑，保障其高品質的晚年生活。</p>"
+            },
+            "案例D2": {
+                title: "案例D2：跨境雙平台架構落地實錄",
+                content: "<p class='mb-3'><strong>客戶背景：</strong>科技企業新貴，公司籌備出海，兩名子女計劃赴英美留學。</p><p class='mb-3'><strong>核心痛點：</strong>稅務居民身份錯配，全球資產配置碎片化，缺乏系統的國際化規劃。</p><p><strong>解決方案：</strong><br>1. <strong>身份先行：</strong>通過香港高才通計劃為全家獲取香港身份，優化稅務結構。<br>2. <strong>雙軌架構：</strong>設立新加坡家族辦公室管理金融流動資產，配合香港公司作為業務出海營運中心。<br>3. <strong>教育信託：</strong>設立專項教育與創業信託，約定子女在不同教育階段和創業初期的資金撥付標準，消除不確定性。</p>"
+            }
+        };
+
+        // 書本內容結構
+        const bookData = [
+            {
+                type: 'cover',
+                html: `
+                    <div class="flex flex-col items-center justify-center h-full text-center p-8">
+                        <div class="w-16 h-16 mb-8 border-2 border-summit-gold rounded-full flex items-center justify-center">
+                            <i data-lucide="mountain" class="w-8 h-8 text-summit-gold"></i>
+                        </div>
+                        <h1 class="text-3xl font-bold tracking-widest text-summit-gold mb-4 leading-snug">SUMMIT<br>高淨值家族規劃標準手冊</h1>
+                        <div class="w-24 h-px bg-summit-gold/50 my-6"></div>
+                        <p class="text-slate-300 text-lg tracking-wider">客戶分類模型 × 架架構設計 × 案例實錄</p>
+                        <p class="mt-auto pt-10 text-xs text-slate-500 tracking-widest">內部機密 · 專業顧問專用</p>
+                    </div>
+                `
+            },
+            {
+                title: '版權頁',
+                html: `
+                    <div class="h-full flex flex-col justify-end p-8 text-sm text-slate-500">
+                        <h2 class="text-xl font-bold text-slate-800 mb-4">版權聲明</h2>
+                        <p class="mb-2">本手冊由 SUMMIT 家族辦公室戰略研究院編寫。</p>
+                        <p class="mb-2">版本：V2.0 (2026年度修訂版)</p>
+                        <p class="mb-6">版權所有 © SUMMIT Family Office。未經書面許可，任何人不得以任何形式翻印、複製或外傳本手冊內容。</p>
+                        <div class="border-t border-slate-300 pt-4 mt-10">
+                            <p class="font-bold mb-1">使用說明：</p>
+                            <ul class="list-disc pl-4 space-y-1">
+                                <li>第一篇為理論基礎，建議新入職顧問必讀</li>
+                                <li>第二篇為核心方法論，按客戶類型快速索引</li>
+                                <li>第三篇為工具模板，可直接套用於客戶方案</li>
+                                <li>第四篇為實戰參考，需結合實際情況調整</li>
+                            </ul>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: '【前言】',
+                html: `
+                    <h2 class="text-2xl font-bold text-summit-dark mb-6 border-b-2 border-summit-gold inline-block pb-2">【前言】</h2>
+                    <h3 class="text-xl font-bold text-slate-700 mb-4 mt-6">致 SUMMIT 專業顧問：從產品銷售到結構設計</h3>
+                    <p class="mb-4 leading-relaxed text-slate-600">
+                        歡迎翻開《SUMMIT 高淨值家族規劃標準手冊》。<br><br>
+                        在當前的財富管理行業，單一的金融產品銷售模式已經走到盡頭。我們面對的高淨值客戶，其痛點不再是簡單的收益率比拼，而是橫跨企業經營、家族傳承、稅務合規、身份跨境等綜合性挑戰。<br><br>
+                        本手冊的核心目的，是幫助各位顧問實現角色轉型——從「產品銷售員」蛻變為「家族資本架構師」。通過標準化的客戶分類模型與架構設計工具箱，我們期望每一位顧問都能具備頂層設計的能力，為客戶提供真正具備防禦力與生長力的家族財富解決方案。
+                    </p>
+                `
+            },
+            {
+                title: '完整目錄',
+                isTOC: true,
+                html: `
+                    <h2 class="text-2xl font-bold text-summit-dark mb-6 border-b-2 border-summit-gold inline-block pb-2">完整目錄</h2>
+                    <div class="text-sm space-y-4" id="page-toc-content">
+                        <!-- JS 注入 -->
+                    </div>
+                `
+            },
+            {
+                title: '第一篇：SUMMIT 核心方法論',
+                html: `
+                    <div class="h-full flex flex-col justify-center items-center bg-slate-100/50 -mx-10 -my-10 p-10">
+                        <span class="text-summit-gold text-lg font-bold tracking-widest mb-2">PART 01</span>
+                        <h2 class="text-3xl font-bold text-slate-800 text-center">SUMMIT 核心方法論</h2>
+                        <div class="w-16 h-1 bg-summit-gold mt-6"></div>
+                    </div>
+                `
+            },
+            {
+                title: '第1章 高淨值家族規劃的本質',
+                chapter: '1.1 - 1.4',
+                html: `
+                    <h2 class="text-xl font-bold text-summit-dark mb-4">第1章 高淨值家族規劃的本質</h2>
+                    <ul class="space-y-6">
+                        <li>
+                            <h4 class="font-bold text-slate-800">1.1 從財富管理到家族資本架構</h4>
+                            <p class="text-slate-600 text-sm mt-1">財富管理關注資產的保值增值，而家族資本架構關注資產的所有權結構、控制權分配與風險邊界設定。</p>
+                        </li>
+                        <li>
+                            <h4 class="font-bold text-slate-800">1.2 SUMMIT 規劃三維模型</h4>
+                            <p class="text-slate-600 text-sm mt-1">底層：<strong>安全隔離</strong> (防守)<br>中層：<strong>資本升級</strong> (增長)<br>頂層：<strong>精神與控制權傳承</strong> (延續)</p>
+                        </li>
+                        <li>
+                            <h4 class="font-bold text-slate-800">1.3 客戶生命週期與規劃切入點</h4>
+                            <p class="text-slate-600 text-sm mt-1">創富期(重風險隔離) -> 守富期(重資產配置) -> 傳富期(重信託與治理)。</p>
+                        </li>
+                        <li>
+                            <h4 class="font-bold text-slate-800">1.4 顧問角色定位：架構師而非銷售員</h4>
+                            <p class="text-slate-600 text-sm mt-1">先診斷，後開方。以架構為核心，金融工具（保險、信託、基金）只是實現架構的零件。</p>
+                        </li>
+                    </ul>
+                `
+            },
+            {
+                title: '第2章 標準化作業流程（SOP）',
+                chapter: '2.1 - 2.5',
+                html: `
+                    <h2 class="text-xl font-bold text-summit-dark mb-4">第2章 標準化作業流程（SOP）</h2>
+                    <div class="space-y-4">
+                        <div class="p-3 bg-slate-50 border-l-4 border-summit-gold rounded">
+                            <h4 class="font-bold text-slate-800">2.1 客戶深度訪談七步法</h4>
+                            <p class="text-slate-600 text-sm mt-1">破冰 -> 探詢現狀 -> 挖掘痛點 -> 放大風險 -> 提出願景 -> 初步建議 -> 締結意向。</p>
+                        </div>
+                        <div class="p-3 bg-slate-50 border-l-4 border-slate-400 rounded">
+                            <h4 class="font-bold text-slate-800">2.2 家庭資產盤點與風險掃描</h4>
+                            <p class="text-slate-600 text-sm mt-1">利用 KYCC 工具表，穿透實控人，繪製資產分佈圖與股權結構圖。</p>
+                        </div>
+                        <div class="p-3 bg-slate-50 border-l-4 border-slate-400 rounded">
+                            <h4 class="font-bold text-slate-800">2.3 三年規劃路徑圖設計原則</h4>
+                            <p class="text-slate-600 text-sm mt-1">第一年：止血與隔離；第二年：架構搭建與合規；第三年：收益優化與傳承落地。</p>
+                        </div>
+                        <div class="p-3 bg-slate-50 border-l-4 border-slate-400 rounded">
+                            <h4 class="font-bold text-slate-800">2.4 方案呈現與關鍵談判話術</h4>
+                            <p class="text-slate-600 text-sm mt-1">視覺化呈現複雜架構，運用對比法展現規劃前後的風險敞口變化。</p>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: '第二篇：客戶分類模型與策略',
+                html: `
+                    <div class="h-full flex flex-col justify-center items-center bg-slate-100/50 -mx-10 -my-10 p-10">
+                        <span class="text-summit-gold text-lg font-bold tracking-widest mb-2">PART 02</span>
+                        <h2 class="text-3xl font-bold text-slate-800 text-center">客戶分類模型與策略矩陣</h2>
+                        <div class="w-16 h-1 bg-summit-gold mt-6"></div>
+                    </div>
+                `
+            },
+            {
+                title: '第3章 A類：企業操盤型',
+                chapter: '3.1 - 3.5',
+                html: `
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="briefcase" class="text-summit-gold"></i>
+                        <h2 class="text-xl font-bold text-summit-dark">第3章 <span class="term-link" onclick="handleTermClick('A類：企業操盤型')">A類：企業操盤型</span></h2>
+                    </div>
+                    <ul class="space-y-4 text-sm">
+                        <li><strong>3.1 畫像：</strong>銀行/金融轉型創業者、實業兼投資人。</li>
+                        <li><strong>3.2 痛點：</strong>項目依賴 vs 平台缺失、地域集中、政策風險。</li>
+                        <li><strong>3.3 風險預警：</strong>企業家個人連帶責任、現金流錯配。</li>
+                        <li><strong>3.4 建議架構設計：</strong>
+                            <ul class="list-disc pl-5 mt-1 text-slate-600">
+                                <li>雙平台模型：內地資產端 + 香港控股端</li>
+                                <li>基金化升級：從單項目到母基金</li>
+                                <li>家族資產與企業風險徹底隔離</li>
+                            </ul>
+                        </li>
+                        <li class="pt-4 border-t border-slate-200">
+                            <strong>3.5 成功案例實錄：</strong><br>
+                            <button class="case-btn" onclick="handleCaseClick('案例A1')"><i data-lucide="book-open" class="w-4 h-4 mr-1"></i> 查看 案例A1：不良資產操盤手的跨境升級</button><br>
+                            <button class="case-btn" onclick="handleCaseClick('案例A2')"><i data-lucide="book-open" class="w-4 h-4 mr-1"></i> 查看 案例A2：江浙製造業主的資本平台化</button>
+                        </li>
+                    </ul>
+                `
+            },
+            {
+                title: '第4章 B類：家族傳承型',
+                chapter: '4.1 - 4.5',
+                html: `
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="users" class="text-summit-gold"></i>
+                        <h2 class="text-xl font-bold text-summit-dark">第4章 B類：家族傳承型</h2>
+                    </div>
+                    <ul class="space-y-4 text-sm">
+                        <li><strong>4.1 畫像：</strong>家族企業第二代/第三代、多子女結構。</li>
+                        <li><strong>4.2 痛點：</strong>接班人培養與權力過渡、兄弟姐妹利益平衡、控制權稀釋。</li>
+                        <li><strong>4.3 風險預警：</strong>婚變股權分割、代際價值觀衝突、稅務傳承。</li>
+                        <li><strong>4.4 建議架構設計：</strong>
+                            <ul class="list-disc pl-5 mt-1 text-slate-600">
+                                <li><span class="term-link" onclick="handleTermClick('家族憲章')">家族憲章</span>與治理機制</li>
+                                <li><span class="term-link" onclick="handleTermClick('家族信託')">家族信託</span> + 控股公司雙層架構</li>
+                            </ul>
+                        </li>
+                        <li class="pt-4 border-t border-slate-200">
+                            <strong>4.5 成功案例實錄：</strong><br>
+                            <button class="case-btn" onclick="handleCaseClick('案例B2')"><i data-lucide="book-open" class="w-4 h-4 mr-1"></i> 查看 案例B2：多子女家族企業的股權平衡術</button>
+                        </li>
+                    </ul>
+                `
+            },
+            {
+                title: '第5章 C類：自由資本型',
+                chapter: '5.1 - 5.5',
+                html: `
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="coffee" class="text-summit-gold"></i>
+                        <h2 class="text-xl font-bold text-summit-dark">第5章 C類：自由資本型</h2>
+                    </div>
+                    <ul class="space-y-4 text-sm">
+                        <li><strong>5.1 畫像：</strong>財富自由單身/無子女、海歸或國際視野、藝術文化導向。</li>
+                        <li><strong>5.2 痛點：</strong>人生第二曲線迷茫、精神空虛、社交同質化。</li>
+                        <li><strong>5.3 風險預警：</strong>感情財產糾紛、藝術收藏流動性、長期照護風險。</li>
+                        <li><strong>5.4 建議架構設計：</strong>
+                            <ul class="list-disc pl-5 mt-1 text-slate-600">
+                                <li>生活方式資本化：興趣變IP</li>
+                                <li>文化資本轉化：藝術基金與策展</li>
+                                <li>影響力平台：女性/精英社群搭建</li>
+                            </ul>
+                        </li>
+                        <li class="pt-4 border-t border-slate-200">
+                            <strong>5.5 成功案例實錄：</strong><br>
+                            <button class="case-btn" onclick="handleCaseClick('案例C1')"><i data-lucide="book-open" class="w-4 h-4 mr-1"></i> 查看 案例C1：藝術收藏家的第二曲線規劃</button>
+                        </li>
+                    </ul>
+                `
+            },
+            {
+                title: '第6章 D類：跨境升級型',
+                chapter: '6.1 - 6.5',
+                html: `
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="globe" class="text-summit-gold"></i>
+                        <h2 class="text-xl font-bold text-summit-dark">第6章 D類：跨境升級型</h2>
+                    </div>
+                    <ul class="space-y-4 text-sm">
+                        <li><strong>6.1 畫像：</strong>子女教育國際化需求、已有海外資產或身份。</li>
+                        <li><strong>6.2 痛點：</strong>身份與稅務錯配、資產碎片化、教育路徑不確定。</li>
+                        <li><strong>6.3 風險預警：</strong><span class="term-link" onclick="handleTermClick('CRS')">CRS</span>與信息透明化、跨境法律衝突、匯率風險。</li>
+                        <li><strong>6.4 建議架構設計：</strong>
+                            <ul class="list-disc pl-5 mt-1 text-slate-600">
+                                <li>香港身份 + 家族辦公室雙軌</li>
+                                <li>全球資產配置模型：多幣種與新興市場</li>
+                                <li>子女教育基金與信託設計</li>
+                            </ul>
+                        </li>
+                        <li class="pt-4 border-t border-slate-200">
+                            <strong>6.5 成功案例實錄：</strong><br>
+                            <button class="case-btn" onclick="handleCaseClick('案例D2')"><i data-lucide="book-open" class="w-4 h-4 mr-1"></i> 查看 案例D2：跨境雙平台架構落地實錄</button>
+                        </li>
+                    </ul>
+                `
+            },
+            {
+                title: '第三篇：架構設計標準工具箱',
+                html: `
+                    <div class="h-full flex flex-col justify-center items-center bg-slate-100/50 -mx-10 -my-10 p-10">
+                        <span class="text-summit-gold text-lg font-bold tracking-widest mb-2">PART 03</span>
+                        <h2 class="text-3xl font-bold text-slate-800 text-center">架構設計標準工具箱</h2>
+                        <div class="w-16 h-1 bg-summit-gold mt-6"></div>
+                    </div>
+                `
+            },
+            {
+                title: '第7-8章 法律稅務與金融工具',
+                chapter: '7.1 - 8.4',
+                html: `
+                    <h2 class="text-xl font-bold text-summit-dark mb-4">第7章 法律與稅務架構模板</h2>
+                    <ul class="list-disc pl-5 space-y-2 text-sm text-slate-700 mb-6 border-b border-slate-200 pb-4">
+                        <li>7.1 <span class="term-link" onclick="handleTermClick('家族信託')">家族信託</span>設立標準流程與盡職調查要點</li>
+                        <li>7.2 香港控股公司架構圖譜 (搭建 VIE 或紅籌架構)</li>
+                        <li>7.3 跨境基金 <span class="term-link" onclick="handleTermClick('SPV')">SPV</span> 設計指引</li>
+                        <li>7.4 婚前/婚內財產協議範本及公證流程</li>
+                        <li>7.5 稅務優化合規路徑 (結合雙邊稅收協定)</li>
+                    </ul>
+
+                    <h2 class="text-xl font-bold text-summit-dark mb-4">第8章 金融工具配置指南</h2>
+                    <ul class="list-disc pl-5 space-y-2 text-sm text-slate-700">
+                        <li>8.1 大額人壽保險在架構中的風險隔離與現金流槓桿功能</li>
+                        <li>8.2 私募股權與不良資產在家族投資組合中的配置比例建議</li>
+                        <li>8.3 流動性管理與長期護理基金的產品篩選標準</li>
+                        <li>8.4 藝術品與另類投資的確權與估值管理</li>
+                    </ul>
+                `
+            },
+            {
+                title: '第9章 身份與生活方式規劃',
+                chapter: '9.1 - 9.4',
+                html: `
+                    <h2 class="text-xl font-bold text-summit-dark mb-4">第9章 身份與生活方式規劃</h2>
+                    <div class="grid grid-cols-1 gap-4 mt-6">
+                        <div class="bg-white p-4 border border-slate-200 rounded-lg shadow-sm">
+                            <h4 class="font-bold text-summit-gold flex items-center gap-2 mb-2"><i data-lucide="passport" class="w-4 h-4"></i> 9.1 身份策略</h4>
+                            <p class="text-xs text-slate-600">香港高才/優才申請路徑規劃與七年續簽合規策略，確保身份與稅務的最優匹配。</p>
+                        </div>
+                        <div class="bg-white p-4 border border-slate-200 rounded-lg shadow-sm">
+                            <h4 class="font-bold text-summit-gold flex items-center gap-2 mb-2"><i data-lucide="stethoscope" class="w-4 h-4"></i> 9.2 醫療網絡</h4>
+                            <p class="text-xs text-slate-600">打通全球頂尖醫療資源網絡，包括赴美/日重症綠色通道與瑞士抗衰老療養安排。</p>
+                        </div>
+                        <div class="bg-white p-4 border border-slate-200 rounded-lg shadow-sm">
+                            <h4 class="font-bold text-summit-gold flex items-center gap-2 mb-2"><i data-lucide="plane" class="w-4 h-4"></i> 9.3 頂級資產規劃</h4>
+                            <p class="text-xs text-slate-600">私人飛機、遊艇等生活方式資產的離岸公司代持架構設計與日常運營成本優化。</p>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: '第四篇：實戰與附錄',
+                html: `
+                    <div class="h-full flex flex-col justify-center items-center bg-slate-100/50 -mx-10 -my-10 p-10">
+                        <span class="text-summit-gold text-lg font-bold tracking-widest mb-2">PART 04 & 05</span>
+                        <h2 class="text-3xl font-bold text-slate-800 text-center">實戰案例庫與附錄</h2>
+                        <div class="w-16 h-1 bg-summit-gold mt-6"></div>
+                    </div>
+                `
+            },
+            {
+                title: '第11-12章 訪談與呈現',
+                chapter: '11.1 - 12.4',
+                html: `
+                    <h2 class="text-xl font-bold text-summit-dark mb-4">第11章 客戶訪談與需求挖掘話術</h2>
+                    <ul class="list-disc pl-5 space-y-2 text-sm text-slate-700 mb-6">
+                        <li><strong>開場白：</strong>如何利用行業痛點建立專業權威感與信任。</li>
+                        <li><strong>痛點探詢：</strong>五個直擊靈魂的深層問題（企業风险、代際差異、婚姻風險等）。</li>
+                        <li><strong>異議處理：</strong>應對「我已經有私行顧問了」的高階話術解析。</li>
+                    </ul>
+
+                    <h2 class="text-xl font-bold text-summit-dark mb-4">第12章 方案呈現與視覺化工具</h2>
+                    <ul class="list-disc pl-5 space-y-2 text-sm text-slate-700">
+                        <li>12.1 家族架構圖繪製標準（符號、顏色與層級規範）</li>
+                        <li>12.2 三年規劃路徑圖甘特圖模板</li>
+                        <li>12.3 PPT呈現邏輯：運用「現狀-風險-方案-願景」結構化表達</li>
+                    </ul>
+                `
+            },
+            {
+                title: '附錄與後記',
+                html: `
+                    <h2 class="text-xl font-bold text-summit-dark mb-4">第五篇：附錄工具表</h2>
+                    <div class="bg-slate-50 p-4 rounded text-sm text-slate-600 mb-6 space-y-2">
+                        <p><strong>附錄A：</strong> 高淨值客戶盡職調查清單 (KYC/KYCC)</p>
+                        <p><strong>附錄B：</strong> 全球主要離岸地比較表（香港、新加坡、BVI、開曼等）</p>
+                        <p><strong>附錄C：</strong> 合作機構白名單庫（律所、稅務師、移民顧問、教育機構）</p>
+                        <p><strong>附錄D：</strong> 術語表與合規提示</p>
+                    </div>
+                    
+                    <h2 class="text-xl font-bold text-summit-dark mb-2 border-t pt-4">【後記】成為家族資本架構師的修煉之路</h2>
+                    <p class="text-sm text-slate-600 leading-relaxed italic">
+                        「財富的傳承，本質上是認知與價值觀的傳承。作為 SUMMIT 的專業顧問，我們不僅是架構的設計者，更是客戶家族跨越週期的同行者。保持敬畏，持續精進。」
+                    </p>
+                `
+            },
+            {
+                type: 'cover',
+                html: `
+                    <div class="flex flex-col items-center justify-center h-full text-center p-8">
+                        <div class="w-16 h-16 mt-auto mb-6 border border-summit-gold/50 rounded-full flex items-center justify-center">
+                            <i data-lucide="mountain" class="w-8 h-8 text-summit-gold/50"></i>
+                        </div>
+                        <p class="text-summit-gold/80 font-serif tracking-widest text-sm mb-auto">SUMMIT FAMILY OFFICE</p>
+                        <p class="mt-auto pb-8 text-xs text-slate-500 tracking-widest">www.summit-fo.com<br>Strictly Confidential</p>
+                    </div>
+                `
+            }
+        ];
+
+        // 系統變量
+        let currentSheet = 0;
+        const totalPages = bookData.length;
+        const totalSheets = Math.ceil(totalPages / 2);
+        
+        // 讀取本地進度
+        const savedProgress = localStorage.getItem('summitBookProgress');
+        if (savedProgress !== null) {
+            currentSheet = parseInt(savedProgress, 10);
+        }
+
+        // 初始化書本結構
+        function initBook() {
+            const bookEl = document.getElementById('book');
+            bookEl.innerHTML = '';
+            
+            for (let i = 0; i <= totalSheets; i++) {
+                const sheet = document.createElement('div');
+                sheet.className = 'sheet';
+                sheet.style.zIndex = totalSheets - i;
+                sheet.onclick = (e) => handlePageClick(e, i);
+
+                const frontPageIdx = i * 2 - 1; // 封面是 sheet 0 的 front 嗎？ 
+                // 邏輯重構：
+                // Sheet 0: Front(Cover: idx 0), Back(Page 1: idx 1)
+                // Sheet 1: Front(Page 2: idx 2), Back(Page 3: idx 3)
+                
+                const fIdx = i * 2;
+                const bIdx = i * 2 + 1;
+
+                const frontHTML = buildPageContent(fIdx);
+                const backHTML = buildPageContent(bIdx, true);
+
+                let coverClassesFront = fIdx === 0 ? 'cover' : '';
+                let coverClassesBack = bIdx === totalPages - 1 ? 'cover' : '';
+
+                sheet.innerHTML = `
+                    <div class="face front ${coverClassesFront}">
+                        ${frontHTML}
+                    </div>
+                    <div class="face back ${coverClassesBack}">
+                        ${backHTML}
+                    </div>
+                `;
+                bookEl.appendChild(sheet);
+            }
+
+            buildTOC();
+            updateBookTransform();
+            lucide.createIcons();
+            
+            // 監聽鍵盤事件
+            document.addEventListener('keydown', (e) => {
+                if(e.key === 'ArrowRight') nextSheet();
+                if(e.key === 'ArrowLeft') prevSheet();
+            });
+
+            // 監聽進度條
+            document.getElementById('progress-slider').addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                const targetSheet = Math.round((val / 100) * totalSheets);
+                goToSheet(targetSheet);
+            });
+
+            // 監聽搜尋
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
+
+            // 自適應縮放
+            window.addEventListener('resize', scaleBook);
+            scaleBook();
+        }
+
+        // 構建單頁內容
+        function buildPageContent(index, isBack = false) {
+            if (index >= totalPages) return '<div class="page-content"></div>';
+            
+            const data = bookData[index];
+            if (data.type === 'cover') {
+                return data.html; // 封面不需要頁碼和標準排版
+            }
+
+            let content = `<div class="page-content">`;
+            content += data.html;
+            
+            // 頁碼
+            if (index > 0 && index < totalPages - 1) {
+                content += `<div class="page-number">- ${index} -</div>`;
+            }
+            content += `</div>`;
+            return content;
+        }
+
+        // 點擊翻頁邏輯
+        function handlePageClick(e, sheetIndex) {
+            // 避免點擊內部按鈕或連結時觸發翻頁
+            if(e.target.closest('.term-link') || e.target.closest('.case-btn')) return;
+            
+            // 判斷點擊區域（簡單以螢幕X座標判斷）
+            const rect = document.getElementById('scene').getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            
+            if (clickX > rect.width / 2) {
+                nextSheet();
+            } else {
+                prevSheet();
+            }
+        }
+
+        function nextSheet() {
+            if (currentSheet < totalSheets) {
+                currentSheet++;
+                updateBookTransform();
+            }
+        }
+
+        function prevSheet() {
+            if (currentSheet > 0) {
+                currentSheet--;
+                updateBookTransform();
+            }
+        }
+
+        function goToSheet(sheetIndex) {
+            if (sheetIndex >= 0 && sheetIndex <= totalSheets) {
+                currentSheet = sheetIndex;
+                updateBookTransform();
+            }
+        }
+
+        // 更新 3D 書本狀態
+        function updateBookTransform() {
+            const sheets = document.querySelectorAll('.sheet');
+            
+            sheets.forEach((sheet, index) => {
+                if (index < currentSheet) {
+                    // 已翻過去的頁面 (左側)
+                    sheet.classList.add('flipped');
+                    sheet.style.zIndex = index;
+                } else {
+                    // 未翻過去的頁面 (右側)
+                    sheet.classList.remove('flipped');
+                    sheet.style.zIndex = totalSheets - index;
+                }
+            });
+
+            // 如果是在第一頁，將書本移至中心偏左，讓封面置中
+            const bookEl = document.getElementById('book');
+            if (currentSheet === 0) {
+                bookEl.style.transform = 'translateX(25%)';
+            } else if (currentSheet === totalSheets) {
+                bookEl.style.transform = 'translateX(-25%)';
+            } else {
+                bookEl.style.transform = 'translateX(0)';
+            }
+
+            // 更新 UI
+            updateUI();
+            playFlipSound();
+            
+            // 儲存進度
+            localStorage.setItem('summitBookProgress', currentSheet);
+        }
+
+        // 動態生成目錄
+        function buildTOC() {
+            const tocNav = document.getElementById('toc-container');
+            let tocHTML = '';
+            
+            bookData.forEach((page, index) => {
+                if (page.title && page.type !== 'cover' && !page.isTOC) {
+                    const sheetTarget = Math.floor(index / 2);
+                    tocHTML += `
+                        <button onclick="goToSheet(${sheetTarget}); toggleSidebar();" class="toc-item w-full text-left py-2 px-3 rounded hover:bg-slate-800 transition flex justify-between items-center group">
+                            <span class="group-hover:text-summit-gold transition-colors">${page.title}</span>
+                            <span class="text-xs text-slate-500">P.${index}</span>
+                        </button>
+                    `;
+                }
+            });
+            tocNav.innerHTML = tocHTML;
+
+            // 將目錄內容也注入到書本內的目錄頁
+            const inBookTOC = document.getElementById('page-toc-content');
+            if(inBookTOC) {
+                let innerTOC = '<ul class="space-y-3">';
+                bookData.forEach((page, index) => {
+                    if (page.title && page.type !== 'cover' && !page.isTOC) {
+                        const sheetTarget = Math.floor(index / 2);
+                        innerTOC += `
+                            <li class="flex justify-between items-center border-b border-slate-200 pb-2 cursor-pointer hover:text-summit-gold transition" onclick="goToSheet(${sheetTarget})">
+                                <span class="font-bold">${page.title}</span>
+                                <span class="text-slate-400 text-xs">${index}</span>
+                            </li>
+                        `;
+                    }
+                });
+                innerTOC += '</ul>';
+                inBookTOC.innerHTML = innerTOC;
+            }
+        }
+
+        // 更新底部控制欄 UI
+        function updateUI() {
+            const percentage = Math.round((currentSheet / totalSheets) * 100);
+            document.getElementById('page-indicator').textContent = `閱讀進度: ${percentage}%`;
+            document.getElementById('progress-slider').value = percentage;
+        }
+
+        // 搜尋功能
+        function handleSearch(e) {
+            const query = e.target.value.toLowerCase();
+            const items = document.querySelectorAll('.toc-item');
+            
+            if(query.trim() !== '') {
+                if(!document.getElementById('sidebar').classList.contains('open')){
+                    toggleSidebar();
+                }
+            }
+
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    item.style.display = 'flex';
+                    // 簡單的高亮
+                    if(query.length > 0) {
+                        const regex = new RegExp(`(${query})`, "gi");
+                        item.querySelector('span').innerHTML = item.querySelector('span').textContent.replace(regex, "<span class='highlight'>$1</span>");
+                    } else {
+                        item.querySelector('span').innerHTML = item.querySelector('span').textContent;
+                    }
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // 自適應縮放書本
+        function scaleBook() {
+            const scene = document.getElementById('scene');
+            const book = document.getElementById('book');
+            
+            // 可用空間 (減去頭部和底部)
+            const availableWidth = window.innerWidth * 0.9;
+            const availableHeight = window.innerHeight - 150; 
+            
+            // 書本原始尺寸 (展開狀態)
+            const bookWidth = 1200;
+            const bookHeight = 800;
+
+            const scaleX = availableWidth / bookWidth;
+            const scaleY = availableHeight / bookHeight;
+            const scale = Math.min(scaleX, scaleY, 1); // 最大不超過 1
+
+            // 應用縮放，並保持 transform 的其他屬性由 updateBookTransform 控制
+            book.style.width = `${bookWidth * scale}px`;
+            book.style.height = `${bookHeight * scale}px`;
+        }
+
+        // 側邊欄控制
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        // 模態框控制 (名詞與案例)
+        function handleTermClick(term) {
+            if(knowledgeBase[term]) {
+                showModal(`名詞解釋：${term}`, `<p>${knowledgeBase[term]}</p>`);
+            }
+        }
+
+        function handleCaseClick(caseId) {
+            if(caseStudies[caseId]) {
+                showModal(caseStudies[caseId].title, caseStudies[caseId].content);
+            }
+        }
+
+        function showModal(title, body) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').innerHTML = body;
+            document.getElementById('modal-backdrop').classList.add('active');
+        }
+
+        function hideModal() {
+            document.getElementById('modal-backdrop').classList.remove('active');
+        }
+
+        function closeModal(e) {
+            if (e.target.id === 'modal-backdrop') {
+                hideModal();
+            }
+        }
+
+        // 音效控制
+        let soundEnabled = true;
+        const flipSound = document.getElementById('flip-sound');
+        
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.querySelector('#soundBtn i');
+            if(soundEnabled) {
+                icon.setAttribute('data-lucide', 'volume-2');
+            } else {
+                icon.setAttribute('data-lucide', 'volume-x');
+            }
+            lucide.createIcons();
+        }
+
+        function playFlipSound() {
+            if (soundEnabled && flipSound) {
+                flipSound.currentTime = 0;
+                // 降低音量使體驗更優雅
+                flipSound.volume = 0.3;
+                flipSound.play().catch(e => {
+                    // 忽略瀏覽器阻攔未互動自動播放的報錯
+                });
+            }
+        }
+
+        // 啟動
+        window.onload = () => {
+            initBook();
+            // 如果有本地進度，延遲一下翻轉到該頁
+            if(currentSheet > 0) {
+                setTimeout(() => {
+                    updateBookTransform();
+                }, 100);
+            }
+        };
+    </script>
+</body>
+</html>
