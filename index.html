@@ -54,6 +54,22 @@
             overflow: hidden;
         }
 
+        /* 行動端頁面樣式 */
+        .mobile-page-inner {
+            padding: 40px 24px;
+            font-size: 1.1rem;
+            line-height: 1.7;
+        }
+        .mobile-page-inner .text-xs { font-size: 0.95rem; }
+        .mobile-page-inner .text-sm { font-size: 1.05rem; }
+        .mobile-page-inner .text-base { font-size: 1.15rem; }
+        .mobile-page-inner .text-lg { font-size: 1.25rem; }
+        .mobile-page-inner .text-xl { font-size: 1.4rem; }
+        .mobile-page-inner .text-2xl { font-size: 1.6rem; }
+        .mobile-page-inner h2 { margin-bottom: 1rem; }
+        .mobile-page-inner h4 { margin-bottom: 0.5rem; }
+        .mobile-page-inner p, .mobile-page-inner li { margin-bottom: 0.75rem; }
+
         #book {
             position: relative;
             width: 1200px; 
@@ -253,10 +269,17 @@
         </div>
     </aside>
 
-    <!-- 主視覺區：3D 書本 -->
-    <main id="scene">
+    <!-- 桌面端主視覺區：3D 書本 -->
+    <main id="scene" class="hidden md:flex">
         <div id="book">
             <!-- 書頁將由 JS 動態生成 -->
+        </div>
+    </main>
+
+    <!-- 行動端主視覺區：上下滑動 -->
+    <main id="mobile-view" class="md:hidden flex-1 w-full h-full pt-16 pb-24 overflow-y-auto bg-slate-900 scroll-smooth snap-y snap-mandatory">
+        <div id="mobile-pages-container" class="flex flex-col w-full min-h-max">
+            <!-- 手機版頁面將由 JS 動態生成 -->
         </div>
     </main>
 
@@ -645,6 +668,7 @@
         const totalSheets = Math.ceil(totalPages / 2);
         let currentScale = 1;
         let lastFlippedSheet = -1;
+        let isScrollingProgrammatically = false;
         
         // 讀取本地進度
         const savedProgress = localStorage.getItem('summitBookProgressPage');
@@ -655,13 +679,15 @@
 
         function initBook() {
             const bookEl = document.getElementById('book');
+            const mobileContainer = document.getElementById('mobile-pages-container');
             bookEl.innerHTML = '';
+            if (mobileContainer) mobileContainer.innerHTML = '';
             
+            // 桌面端：3D書頁
             for (let i = 0; i < totalSheets; i++) {
                 const sheet = document.createElement('div');
                 sheet.className = 'sheet';
                 sheet.style.zIndex = totalSheets - i;
-                // 點擊事件統管
                 sheet.onclick = (e) => handlePageClick(e);
 
                 const fIdx = i * 2;
@@ -684,14 +710,37 @@
                 bookEl.appendChild(sheet);
             }
 
+            // 行動端：上下滑動卡片
+            if (mobileContainer) {
+                for (let i = 0; i < totalPages; i++) {
+                    const mobilePage = document.createElement('div');
+                    mobilePage.id = `mobile-page-${i}`;
+                    // Snap 對齊，確保滑動後停留在每一頁的頂部
+                    mobilePage.className = 'w-full min-h-[calc(100vh-4rem)] bg-[#fcfaf5] snap-start relative border-b-8 border-slate-900 shadow-xl';
+                    
+                    const data = bookData[i];
+                    let contentHTML = '';
+                    if (data.type === 'cover') {
+                        contentHTML = `<div class="w-full h-full min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-6 bg-slate-900 text-summit-gold text-center relative">${data.html}</div>`;
+                    } else {
+                        contentHTML = `<div class="mobile-page-inner w-full min-h-full relative pb-20">
+                            ${data.html}
+                            <div class="absolute bottom-6 left-0 w-full text-center text-sm text-slate-400 font-serif">- ${i} -</div>
+                        </div>`;
+                    }
+                    mobilePage.innerHTML = contentHTML;
+                    mobileContainer.appendChild(mobilePage);
+                }
+            }
+
             buildTOC();
             // 先計算縮放尺寸，再應用變換
             scaleBook();
             lucide.createIcons();
             
             document.addEventListener('keydown', (e) => {
-                if(e.key === 'ArrowRight') nextPage();
-                if(e.key === 'ArrowLeft') prevPage();
+                if(e.key === 'ArrowRight' || e.key === 'ArrowDown') nextPage();
+                if(e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevPage();
             });
 
             document.getElementById('progress-slider').addEventListener('input', (e) => {
@@ -701,7 +750,51 @@
             });
 
             document.getElementById('searchInput').addEventListener('input', handleSearch);
-            window.addEventListener('resize', scaleBook);
+            window.addEventListener('resize', handleResize);
+            
+            // 行動端滾動監聽 (同步進度條)
+            const mobileView = document.getElementById('mobile-view');
+            if (mobileView) {
+                mobileView.addEventListener('scroll', () => {
+                    if (isScrollingProgrammatically) return;
+                    
+                    // 找出當前最靠近頂部的頁面
+                    let currentIdx = currentPage;
+                    let minDistance = Infinity;
+                    
+                    for (let i = 0; i < totalPages; i++) {
+                        const pageEl = document.getElementById(`mobile-page-${i}`);
+                        if (pageEl) {
+                            // 距離容器頂部的距離
+                            const rect = pageEl.getBoundingClientRect();
+                            // offsetTop 是相對於文檔，getBoundingClientRect 是相對於視口。
+                            // mobile-view top 是 64px (header height).
+                            const distance = Math.abs(rect.top - 64); 
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                currentIdx = i;
+                            }
+                        }
+                    }
+                    
+                    if (currentIdx !== currentPage) {
+                        currentPage = currentIdx;
+                        updateUI();
+                        localStorage.setItem('summitBookProgressPage', currentPage);
+                    }
+                });
+            }
+            
+            // 初始定位
+            setTimeout(() => {
+                goToPage(currentPage);
+            }, 100);
+        }
+
+        function handleResize() {
+            scaleBook();
+            // 視窗切換時，強制重新定位一次
+            goToPage(currentPage);
         }
 
         function buildPageContent(index) {
@@ -733,36 +826,56 @@
 
         // 電腦版翻過一個Spread(2頁)，手機版聚焦翻過1頁
         function nextPage() {
-            const isMobile = window.innerWidth < 768;
-            const increment = isMobile ? 1 : 2;
-            if (currentPage + increment < totalPages) {
-                currentPage += increment;
+            if (window.innerWidth < 768) {
+                goToPage(currentPage + 1);
             } else {
-                currentPage = totalPages - 1;
+                if (currentPage + 2 < totalPages) {
+                    currentPage += 2;
+                } else {
+                    currentPage = totalPages - 1;
+                }
+                updateBookTransform();
             }
-            updateBookTransform();
         }
 
         function prevPage() {
-            const isMobile = window.innerWidth < 768;
-            const decrement = isMobile ? 1 : 2;
-            if (currentPage - decrement >= 0) {
-                currentPage -= decrement;
+            if (window.innerWidth < 768) {
+                goToPage(currentPage - 1);
             } else {
-                currentPage = 0;
+                if (currentPage - 2 >= 0) {
+                    currentPage -= 2;
+                } else {
+                    currentPage = 0;
+                }
+                updateBookTransform();
             }
-            updateBookTransform();
         }
 
         function goToPage(pageIndex) {
-            if (pageIndex >= 0 && pageIndex < totalPages) {
-                currentPage = pageIndex;
+            if (pageIndex < 0) pageIndex = 0;
+            if (pageIndex >= totalPages) pageIndex = totalPages - 1;
+            currentPage = pageIndex;
+            
+            if (window.innerWidth < 768) {
+                const target = document.getElementById(`mobile-page-${pageIndex}`);
+                if (target) {
+                    isScrollingProgrammatically = true;
+                    // 使用 scrollIntoView 進行平滑滾動
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // 釋放滾動鎖定
+                    setTimeout(() => isScrollingProgrammatically = false, 600);
+                }
+                updateUI();
+                localStorage.setItem('summitBookProgressPage', currentPage);
+            } else {
                 updateBookTransform();
             }
         }
 
         // 動態計算當前需要翻開的實體紙張 (Sheet) 與視角平移 (TranslateX)
         function updateBookTransform() {
+            if (window.innerWidth < 768) return; // 行動端不處理 3D 翻轉
+
             // 判斷哪幾張物理紙張需要被翻轉
             const targetSheet = Math.floor((currentPage + 1) / 2);
             let didFlip = false;
@@ -782,22 +895,14 @@
                 }
             });
 
-            // 計算動態視角追蹤
-            const isMobile = window.innerWidth < 768;
+            // 桌面版：雙頁展開，除了封面與封底需置中
             let translateX = 0;
-
-            if (isMobile) {
-                // 手機版：始終單頁滿版聚焦 (左平移/右平移)
-                translateX = (currentPage % 2 === 0) ? -25 : 25;
+            if (currentPage === 0) {
+                translateX = -25; // 封面靠右，故向左平移置中
+            } else if (currentPage === totalPages - 1) {
+                translateX = (totalPages % 2 === 0) ? 25 : -25;
             } else {
-                // 電腦版：雙頁展開，除了封面與封底需置中
-                if (currentPage === 0) {
-                    translateX = -25; // 封面靠右，故向左平移置中
-                } else if (currentPage === totalPages - 1) {
-                    translateX = (totalPages % 2 === 0) ? 25 : -25;
-                } else {
-                    translateX = 0;
-                }
+                translateX = 0;
             }
 
             // 確保套用正確的 scale 與 translation
@@ -813,19 +918,17 @@
 
         // 計算最佳縮放比例 (運用 transform scale，絕不壓縮排版！)
         function scaleBook() {
-            const isMobile = window.innerWidth < 768;
-            // 給予些許安全邊界
-            const availableWidth = window.innerWidth * (isMobile ? 0.95 : 0.9);
-            // 手機版只需要裝下"單頁"的寬度即可 (600px)，電腦版需要裝下雙頁 (1200px)
-            const effectiveBookWidth = isMobile ? 600 : 1200; 
-            const availableHeight = window.innerHeight - (isMobile ? 180 : 150);
+            if (window.innerWidth < 768) return; // 行動端不再需要 3D 縮放
+            
+            const availableWidth = window.innerWidth * 0.9;
+            const effectiveBookWidth = 1200; 
+            const availableHeight = window.innerHeight - 150;
 
             const scaleX = availableWidth / effectiveBookWidth;
             const scaleY = availableHeight / 800; // 書本固定高度 800px
             currentScale = Math.min(scaleX, scaleY);
             if (currentScale > 1) currentScale = 1;
 
-            // 套用
             updateBookTransform();
         }
 
@@ -934,4 +1037,3 @@
     </script>
 </body>
 </html>
-
