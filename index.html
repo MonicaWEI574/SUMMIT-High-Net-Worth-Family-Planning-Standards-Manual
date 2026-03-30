@@ -861,7 +861,7 @@
         }
 
         // ====== 升級版：AI 添加案例功能 ======
-        const apiKey = "AIzaSyDsMhljNjYGjWUVhD-sW6W9uTnFoV5z87M"; // 系統環境運行時自動填充
+        const apiKey = "AIzaSyDsMhljNjYGjWUVhD-sW6W9uTnFoV5z87M"; // 已為您填入您的真實 API Key
 
         function openAddCaseModal() {
             const backdrop = document.getElementById('add-case-backdrop');
@@ -1019,7 +1019,7 @@
 
             while (retries <= maxRetries) {
                 try {
-                    // 更換為外部環境最穩定支援的 gemini-1.5-flash 模型
+                    // 解決 404 報錯：更換為最穩定且免付費的 gemini-1.5-flash 模型
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
