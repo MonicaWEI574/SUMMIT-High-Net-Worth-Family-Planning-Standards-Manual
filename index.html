@@ -34,8 +34,14 @@
             overflow: hidden;
             font-family: 'Noto Serif TC', serif;
             color: #334155;
-            /* 移除 touch-action，防止在部分 iOS 設備上鎖死滾動 */
         }
+
+        /* 雙模式切換核心：透過 JS 判斷比例並附加 class 於 body */
+        .mobile-mode #scene { display: none !important; }
+        .mobile-mode #mobile-view { display: block !important; }
+
+        .desktop-mode #scene { display: flex !important; }
+        .desktop-mode #mobile-view { display: none !important; }
 
         /* 滾動條美化 */
         ::-webkit-scrollbar { width: 6px; }
@@ -43,43 +49,25 @@
         ::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.3); border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(212, 175, 55, 0.6); }
 
-        /* 書籍 3D 容器 */
+        /* ================= 桌面端：3D 書本樣式 ================= */
         #scene {
             width: 100vw;
             height: 100vh;
-            display: flex;
+            display: flex; /* 會被 body class 覆寫 */
             justify-content: center;
             align-items: center;
-            perspective: 2500px; /* 加深視角，讓翻轉更自然 */
+            perspective: 2500px;
             overflow: hidden;
         }
-
-        /* 行動端頁面樣式 */
-        .mobile-page-inner {
-            padding: 40px 24px;
-            font-size: 1.1rem;
-            line-height: 1.7;
-        }
-        .mobile-page-inner .text-xs { font-size: 0.95rem; }
-        .mobile-page-inner .text-sm { font-size: 1.05rem; }
-        .mobile-page-inner .text-base { font-size: 1.15rem; }
-        .mobile-page-inner .text-lg { font-size: 1.25rem; }
-        .mobile-page-inner .text-xl { font-size: 1.4rem; }
-        .mobile-page-inner .text-2xl { font-size: 1.6rem; }
-        .mobile-page-inner h2 { margin-bottom: 1rem; }
-        .mobile-page-inner h4 { margin-bottom: 0.5rem; }
-        .mobile-page-inner p, .mobile-page-inner li { margin-bottom: 0.75rem; }
 
         #book {
             position: relative;
             width: 1200px; 
             height: 800px; 
             transform-style: preserve-3d;
-            /* 與翻頁動畫保持相同的節奏，讓鏡頭平移如絲般順滑 */
             transition: transform 0.8s cubic-bezier(0.645, 0.045, 0.355, 1);
         }
 
-        /* 單張紙 (包含正反兩面) */
         .sheet {
             position: absolute;
             width: 50%;
@@ -92,7 +80,6 @@
             cursor: pointer;
         }
 
-        /* 紙張的面 */
         .face {
             position: absolute;
             width: 100%;
@@ -117,7 +104,6 @@
             background-image: linear-gradient(to left, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 5%), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.05"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100" height="100" filter="url(%23n)"/></svg>');
         }
 
-        /* 封面/封底特殊樣式 */
         .cover {
             background-color: #1e293b;
             background-image: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -127,27 +113,20 @@
         }
         .face.front.cover { border-left: none; }
         .face.back.cover { border-right: none; }
+        .sheet.flipped { transform: rotateY(-180deg); }
 
-        /* 書頁翻動狀態 */
-        .sheet.flipped {
-            transform: rotateY(-180deg);
-        }
-
-        /* ----- 響應式字體與排版覆蓋 ----- */
-        /* 透過放大內頁的基礎字體，確保縮放至手機時依然具備高辨識度 */
         .page-content {
             padding: 50px 70px; 
             height: 100%;
             overflow-y: auto;
             box-sizing: border-box;
             position: relative;
-            font-size: 1.15rem; /* 基礎字號放大 */
+            font-size: 1.15rem; 
             line-height: 1.8;
         }
         .page-content::-webkit-scrollbar { display: none; }
         .page-content { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* 自動接管 Tailwind 的絕對大小，改為相對適應 */
         .page-content .text-xs { font-size: 0.95rem; line-height: 1.4; }
         .page-content .text-sm { font-size: 1.05rem; line-height: 1.6; }
         .page-content .text-base { font-size: 1.15rem; line-height: 1.8; }
@@ -160,14 +139,55 @@
         .page-content h2 { margin-bottom: 1.5rem; }
         .page-content h4 { font-size: 1.25rem; margin-bottom: 0.5rem; }
 
-        /* 封面獨立控制 */
         .cover-content { width: 100%; height: 100%; font-size: 1.2rem; }
         .cover-content .text-xs { font-size: 1rem; }
         .cover-content .text-sm { font-size: 1.1rem; }
         .cover-content .text-lg { font-size: 1.5rem; }
         .cover-content .text-3xl { font-size: 2.5rem; }
 
-        /* 互動元素 */
+        .page-number {
+            position: absolute;
+            bottom: 25px;
+            font-size: 1rem;
+            color: #94a3b8;
+        }
+        .face.front .page-number { right: 70px; }
+        .face.back .page-number { left: 70px; }
+
+        /* ================= 行動端/直屏：卡片樣式 ================= */
+        .mobile-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            scroll-margin-top: 80px; 
+        }
+        .mobile-card-cover {
+            background-color: #0f172a;
+            background-image: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #D4AF37;
+            border: 1px solid #D4AF37;
+        }
+        .mobile-page-inner {
+            padding: 32px 28px; /* 加大內邊距，平板看也舒服 */
+            line-height: 1.6;
+            color: #334155;
+        }
+        .mobile-page-inner .text-xs { font-size: 0.85rem; }
+        .mobile-page-inner .text-sm { font-size: 0.95rem; }
+        .mobile-page-inner .text-base { font-size: 1rem; }
+        .mobile-page-inner .text-lg { font-size: 1.1rem; }
+        .mobile-page-inner .text-xl { font-size: 1.25rem; }
+        .mobile-page-inner .text-2xl { font-size: 1.4rem; }
+        .mobile-page-inner .text-3xl { font-size: 1.6rem; }
+        .mobile-page-inner .text-4xl { font-size: 1.8rem; }
+        .mobile-page-inner h2 { margin-bottom: 1rem; }
+        .mobile-page-inner h4 { margin-bottom: 0.5rem; }
+        .mobile-page-inner p, .mobile-page-inner li { margin-bottom: 0.75rem; }
+
+        /* ================= 共用互動元素 ================= */
         .term-link {
             color: #b45309;
             border-bottom: 1px dashed #b45309;
@@ -192,16 +212,6 @@
         }
         .case-btn:hover { background-color: #fde68a; transform: translateY(-1px); }
 
-        .page-number {
-            position: absolute;
-            bottom: 25px;
-            font-size: 1rem;
-            color: #94a3b8;
-        }
-        .face.front .page-number { right: 70px; }
-        .face.back .page-number { left: 70px; }
-
-        /* 側邊導航欄 */
         #sidebar {
             transform: translateX(-100%);
             transition: transform 0.3s ease;
@@ -209,7 +219,6 @@
         }
         #sidebar.open { transform: translateX(0); }
 
-        /* 模態框動畫 */
         #modal-backdrop {
             opacity: 0;
             pointer-events: none;
@@ -228,7 +237,7 @@
         }
     </style>
 </head>
-<body class="antialiased flex h-[100dvh] w-[100dvw] overflow-hidden">
+<body class="antialiased flex h-screen w-screen overflow-hidden desktop-mode">
 
     <!-- 音效 -->
     <audio id="flip-sound" src="https://assets.mixkit.co/active_storage/sfx/2092/2092-preview.mp3" preload="auto"></audio>
@@ -269,16 +278,16 @@
         </div>
     </aside>
 
-    <!-- 桌面端主視覺區：3D 書本 -->
-    <main id="scene" class="hidden md:flex">
+    <!-- 桌面端主視覺區：3D 書本 (解除大小限制，可無限放大) -->
+    <main id="scene">
         <div id="book">
             <!-- 書頁將由 JS 動態生成 -->
         </div>
     </main>
 
-    <!-- 行動端主視覺區：上下滑動。移除 snap-y 避免 iOS 卡死計算 -->
-    <main id="mobile-view" class="md:hidden flex-1 w-full h-full pt-16 pb-24 overflow-y-auto bg-slate-900 scroll-smooth" style="-webkit-overflow-scrolling: touch;">
-        <div id="mobile-pages-container" class="flex flex-col w-full min-h-max">
+    <!-- 行動端主視覺區：優雅的卡片式連續滾動 (加寬支援平板直屏) -->
+    <main id="mobile-view" class="w-full h-full pt-20 pb-28 px-4 overflow-y-auto bg-slate-100 scroll-smooth relative">
+        <div id="mobile-pages-container" class="flex flex-col w-full max-w-2xl mx-auto">
             <!-- 手機版頁面將由 JS 動態生成 -->
         </div>
     </main>
@@ -381,7 +390,7 @@
                 isTOC: true,
                 html: `
                     <h2 class="text-2xl font-bold text-summit-dark mb-6 border-b-2 border-summit-gold inline-block pb-2">完整目錄</h2>
-                    <div class="text-base space-y-5" id="page-toc-content"></div>
+                    <div class="text-base space-y-5 page-toc-content-placeholder"></div>
                 `
             },
             {
@@ -662,7 +671,7 @@
             }
         ];
 
-        // 系統變量：基於 "頁(Page)" 而非 "紙(Sheet)" 進行全域控制
+        // 系統變量：基於 "頁(Page)"
         let currentPage = 0;
         const totalPages = bookData.length;
         const totalSheets = Math.ceil(totalPages / 2);
@@ -677,13 +686,30 @@
             if(currentPage >= totalPages) currentPage = totalPages - 1;
         }
 
+        // ====== 雙模式比例引擎 ======
+        function checkDeviceMode() {
+            // 判斷邏輯：螢幕寬度小於 850px，或者「高度 > 寬度（直屏）」，就使用行動端比例
+            const isMobile = window.innerWidth <= 850 || window.innerHeight > window.innerWidth;
+            if (isMobile) {
+                document.body.classList.add('mobile-mode');
+                document.body.classList.remove('desktop-mode');
+            } else {
+                document.body.classList.add('desktop-mode');
+                document.body.classList.remove('mobile-mode');
+            }
+        }
+
+        function isMobileMode() {
+            return document.body.classList.contains('mobile-mode');
+        }
+
         function initBook() {
             const bookEl = document.getElementById('book');
             const mobileContainer = document.getElementById('mobile-pages-container');
             bookEl.innerHTML = '';
             if (mobileContainer) mobileContainer.innerHTML = '';
             
-            // 桌面端：3D書頁
+            // 桌面端：生成 3D 結構
             for (let i = 0; i < totalSheets; i++) {
                 const sheet = document.createElement('div');
                 sheet.className = 'sheet';
@@ -710,23 +736,33 @@
                 bookEl.appendChild(sheet);
             }
 
-            // 行動端：上下滑動卡片
+            // 行動端：生成連貫卡片結構
             if (mobileContainer) {
                 for (let i = 0; i < totalPages; i++) {
                     const mobilePage = document.createElement('div');
                     mobilePage.id = `mobile-page-${i}`;
-                    // 移除強制 CSS scroll-snap 對齊，並使用 100dvh 確保高度適應各種手機（解決 iOS 滾動卡死問題）
-                    mobilePage.className = 'w-full bg-[#fcfaf5] relative border-b-[12px] border-slate-900 shadow-2xl';
-                    mobilePage.style.minHeight = 'calc(100dvh - 10rem)';
                     
+                    mobilePage.onclick = (e) => {
+                        if(e.target.closest('.term-link') || e.target.closest('.case-btn') || e.target.closest('button') || e.target.closest('.toc-link')) return;
+                        const clickX = e.clientX;
+                        const width = window.innerWidth;
+                        if (clickX > width * 0.6) {
+                            nextPage();
+                        } else if (clickX < width * 0.4) {
+                            prevPage();
+                        }
+                    };
+
                     const data = bookData[i];
                     let contentHTML = '';
                     if (data.type === 'cover') {
-                        contentHTML = `<div class="w-full h-full min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-6 bg-slate-900 text-summit-gold text-center relative">${data.html}</div>`;
+                        mobilePage.className = 'mobile-card mobile-card-cover';
+                        contentHTML = `<div class="w-full py-16 flex flex-col items-center justify-center px-6 text-center relative">${data.html}</div>`;
                     } else {
-                        contentHTML = `<div class="mobile-page-inner w-full min-h-full relative pb-20">
+                        mobilePage.className = 'mobile-card';
+                        contentHTML = `<div class="mobile-page-inner w-full relative pb-12">
                             ${data.html}
-                            <div class="absolute bottom-6 left-0 w-full text-center text-sm text-slate-400 font-serif">- ${i} -</div>
+                            <div class="absolute bottom-4 left-0 w-full text-center text-xs text-slate-400 font-serif">- 頁碼 ${i} -</div>
                         </div>`;
                     }
                     mobilePage.innerHTML = contentHTML;
@@ -735,7 +771,6 @@
             }
 
             buildTOC();
-            // 先計算縮放尺寸，再應用變換
             scaleBook();
             lucide.createIcons();
             
@@ -753,24 +788,20 @@
             document.getElementById('searchInput').addEventListener('input', handleSearch);
             window.addEventListener('resize', handleResize);
             
-            // 行動端滾動監聽 (同步進度條)
+            // 行動端滾動追蹤
             const mobileView = document.getElementById('mobile-view');
             if (mobileView) {
                 mobileView.addEventListener('scroll', () => {
                     if (isScrollingProgrammatically) return;
                     
-                    // 找出當前最靠近頂部的頁面
                     let currentIdx = currentPage;
                     let minDistance = Infinity;
+                    const viewScrollTop = mobileView.scrollTop;
                     
                     for (let i = 0; i < totalPages; i++) {
                         const pageEl = document.getElementById(`mobile-page-${i}`);
                         if (pageEl) {
-                            // 距離容器頂部的距離
-                            const rect = pageEl.getBoundingClientRect();
-                            // offsetTop 是相對於文檔，getBoundingClientRect 是相對於視口。
-                            // mobile-view top 是 64px (header height).
-                            const distance = Math.abs(rect.top - 64); 
+                            const distance = Math.abs((pageEl.offsetTop - 80) - viewScrollTop);
                             if (distance < minDistance) {
                                 minDistance = distance;
                                 currentIdx = i;
@@ -792,10 +823,17 @@
             }, 100);
         }
 
+        // ====== 自適應重算機制 ======
         function handleResize() {
+            const wasMobile = isMobileMode();
+            checkDeviceMode();
+            const isMobileNow = isMobileMode();
+
+            // 如果因為旋轉螢幕或調整視窗導致模式改變，強制重新歸位
+            if (wasMobile !== isMobileNow) {
+                goToPage(currentPage);
+            }
             scaleBook();
-            // 視窗切換時，強制重新定位一次
-            goToPage(currentPage);
         }
 
         function buildPageContent(index) {
@@ -813,9 +851,8 @@
             return content;
         }
 
-        // 智慧點擊邏輯：點擊螢幕左側回退，點擊右側前進
         function handlePageClick(e) {
-            if(e.target.closest('.term-link') || e.target.closest('.case-btn') || e.target.closest('button')) return;
+            if(e.target.closest('.term-link') || e.target.closest('.case-btn') || e.target.closest('button') || e.target.closest('.toc-link')) return;
             const rect = document.getElementById('scene').getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             if (clickX > rect.width / 2) {
@@ -825,9 +862,8 @@
             }
         }
 
-        // 電腦版翻過一個Spread(2頁)，手機版聚焦翻過1頁
         function nextPage() {
-            if (window.innerWidth < 768) {
+            if (isMobileMode()) {
                 goToPage(currentPage + 1);
             } else {
                 if (currentPage + 2 < totalPages) {
@@ -840,7 +876,7 @@
         }
 
         function prevPage() {
-            if (window.innerWidth < 768) {
+            if (isMobileMode()) {
                 goToPage(currentPage - 1);
             } else {
                 if (currentPage - 2 >= 0) {
@@ -857,13 +893,13 @@
             if (pageIndex >= totalPages) pageIndex = totalPages - 1;
             currentPage = pageIndex;
             
-            if (window.innerWidth < 768) {
+            if (isMobileMode()) {
                 const target = document.getElementById(`mobile-page-${pageIndex}`);
-                if (target) {
+                const mobileView = document.getElementById('mobile-view');
+                if (target && mobileView) {
                     isScrollingProgrammatically = true;
-                    // 使用 scrollIntoView 進行平滑滾動
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    // 釋放滾動鎖定
+                    const y = target.offsetTop - 80;
+                    mobileView.scrollTo({ top: y, behavior: 'smooth' });
                     setTimeout(() => isScrollingProgrammatically = false, 600);
                 }
                 updateUI();
@@ -873,11 +909,9 @@
             }
         }
 
-        // 動態計算當前需要翻開的實體紙張 (Sheet) 與視角平移 (TranslateX)
         function updateBookTransform() {
-            if (window.innerWidth < 768) return; // 行動端不處理 3D 翻轉
+            if (isMobileMode()) return; 
 
-            // 判斷哪幾張物理紙張需要被翻轉
             const targetSheet = Math.floor((currentPage + 1) / 2);
             let didFlip = false;
             if (targetSheet !== lastFlippedSheet) {
@@ -896,20 +930,16 @@
                 }
             });
 
-            // 桌面版：雙頁展開，除了封面與封底需置中
             let translateX = 0;
             if (currentPage === 0) {
-                translateX = -25; // 封面靠右，故向左平移置中
+                translateX = -25;
             } else if (currentPage === totalPages - 1) {
                 translateX = (totalPages % 2 === 0) ? 25 : -25;
             } else {
                 translateX = 0;
             }
 
-            // 確保套用正確的 scale 與 translation
             const bookEl = document.getElementById('book');
-            bookEl.style.width = '1200px'; 
-            bookEl.style.height = '800px'; 
             bookEl.style.transform = `scale(${currentScale}) translateX(${translateX}%)`;
 
             updateUI();
@@ -917,23 +947,27 @@
             localStorage.setItem('summitBookProgressPage', currentPage);
         }
 
-        // 計算最佳縮放比例 (運用 transform scale，絕不壓縮排版！)
+        // ====== 解除限制的比例計算引擎 ======
         function scaleBook() {
-            if (window.innerWidth < 768) return; // 行動端不再需要 3D 縮放
+            if (isMobileMode()) return; 
             
-            const availableWidth = window.innerWidth * 0.9;
+            // 放開限制，直接抓取螢幕的 95% 寬度與可用高度
+            const availableWidth = window.innerWidth * 0.95; 
+            const availableHeight = window.innerHeight - 140;
+
             const effectiveBookWidth = 1200; 
-            const availableHeight = window.innerHeight - 150;
+            const bookHeight = 800;
 
             const scaleX = availableWidth / effectiveBookWidth;
-            const scaleY = availableHeight / 800; // 書本固定高度 800px
+            const scaleY = availableHeight / bookHeight;
+            
+            // 💡核心改變：不再限制最大比例為 1！
+            // 如果是在超寬或高解析度螢幕，currentScale 可以是 1.5 或 2.0，書本會巨大且無比清晰！
             currentScale = Math.min(scaleX, scaleY);
-            if (currentScale > 1) currentScale = 1;
 
             updateBookTransform();
         }
 
-        // 動態生成目錄
         function buildTOC() {
             const tocNav = document.getElementById('toc-container');
             let tocHTML = '';
@@ -950,13 +984,13 @@
             });
             tocNav.innerHTML = tocHTML;
 
-            const inBookTOC = document.getElementById('page-toc-content');
-            if(inBookTOC) {
+            const inBookTOCs = document.querySelectorAll('.page-toc-content-placeholder');
+            if(inBookTOCs.length > 0) {
                 let innerTOC = '<ul class="space-y-4">';
                 bookData.forEach((page, index) => {
                     if (page.title && page.type !== 'cover' && !page.isTOC) {
                         innerTOC += `
-                            <li class="flex justify-between items-center border-b border-slate-200 pb-3 cursor-pointer hover:text-summit-gold transition" onclick="goToPage(${index})">
+                            <li class="toc-link flex justify-between items-center border-b border-slate-200 pb-3 cursor-pointer hover:text-summit-gold transition" onclick="event.stopPropagation(); goToPage(${index})">
                                 <span class="font-bold text-lg">${page.title}</span>
                                 <span class="text-slate-400">${index}</span>
                             </li>
@@ -964,7 +998,7 @@
                     }
                 });
                 innerTOC += '</ul>';
-                inBookTOC.innerHTML = innerTOC;
+                inBookTOCs.forEach(el => el.innerHTML = innerTOC);
             }
         }
 
@@ -974,7 +1008,6 @@
             document.getElementById('progress-slider').value = percentage;
         }
 
-        // 搜尋功能
         function handleSearch(e) {
             const query = e.target.value.toLowerCase();
             const items = document.querySelectorAll('.toc-item');
@@ -999,7 +1032,6 @@
 
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 
-        // 模態框控制
         function handleTermClick(term) {
             if(knowledgeBase[term]) showModal(`名詞解釋：${term}`, `<p>${knowledgeBase[term]}</p>`);
         }
@@ -1014,7 +1046,6 @@
         function hideModal() { document.getElementById('modal-backdrop').classList.remove('active'); }
         function closeModal(e) { if (e.target.id === 'modal-backdrop') hideModal(); }
 
-        // 音效控制
         let soundEnabled = true;
         const flipSound = document.getElementById('flip-sound');
         function toggleSound() {
@@ -1031,8 +1062,9 @@
             }
         }
 
-        // 啟動
+        // ====== 啟動時先做環境判斷 ======
         window.onload = () => {
+            checkDeviceMode();
             initBook();
         };
     </script>
