@@ -255,7 +255,6 @@
                 <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
             </div>
             
-            <!-- 新增：添加案例按鈕 -->
             <button onclick="openAddCaseModal()" class="text-slate-400 hover:text-summit-gold transition p-2" title="添加新案例">
                 <i data-lucide="file-plus-2"></i>
             </button>
@@ -354,7 +353,7 @@
     <script>
         // 知識庫與案例數據
         const knowledgeBase = {
-            "A類：企業操盤型": "指以企業經營和資本運Action為核心的高淨值客戶。這類客戶通常面臨企業經營風險與個人/家族資產混同的痛點，需要強大的風險隔離與資本化升級方案。",
+            "A類：企業操盤型": "指以企業經營和資本運作為核心的高淨值客戶。這類客戶通常面臨企業經營風險與個人/家族資產混同的痛點，需要強大的風險隔離與資本化升級方案。",
             "家族信託": "一種財富管理架構，委託人將財產所有權轉移給受託人，由受託人按信託契約為指定受益人的利益進行管理和處分，具有資產隔離、稅務籌劃與定向傳承的功能。",
             "家族憲章": "家族成員共同制定並遵守的『家族根本大法』，規範家族價值觀、家族企業治理規則、成員權利義務及衝突解決機制。",
             "CRS": "共同申報準則 (Common Reporting Standard)，用於指導參與管轄區定期交換稅務居民財務帳戶信息的全球標準，對高淨值人士的跨境資產透明度產生重大影響。",
@@ -701,7 +700,6 @@
             }
         ];
 
-        // 系統變量：改用 let 以支持動態增加頁數
         let currentPage = 0;
         let totalPages = bookData.length;
         let totalSheets = Math.ceil(totalPages / 2);
@@ -709,11 +707,20 @@
         let lastFlippedSheet = -1;
         let isScrollingProgrammatically = false;
         
-        // 讀取本地進度
-        const savedProgress = localStorage.getItem('summitBookProgressPage');
-        if (savedProgress !== null) {
-            currentPage = parseInt(savedProgress, 10);
-            if(currentPage >= totalPages) currentPage = totalPages - 1;
+        // 【修復崩潰點 1】防禦性讀取 LocalStorage，避免 NaN 錯誤導致書本消失
+        try {
+            const savedProgress = localStorage.getItem('summitBookProgressPage');
+            if (savedProgress !== null) {
+                let parsedPage = parseInt(savedProgress, 10);
+                if (!isNaN(parsedPage)) {
+                    currentPage = parsedPage;
+                }
+                if (currentPage >= totalPages) currentPage = totalPages - 1;
+                if (currentPage < 0) currentPage = 0;
+            }
+        } catch (e) {
+            console.warn("本機存取被封鎖，重置頁碼為 0", e);
+            currentPage = 0;
         }
 
         // ====== 雙模式比例引擎 ======
@@ -735,6 +742,8 @@
         function initBook() {
             const bookEl = document.getElementById('book');
             const mobileContainer = document.getElementById('mobile-pages-container');
+            if (!bookEl) return;
+            
             bookEl.innerHTML = '';
             if (mobileContainer) mobileContainer.innerHTML = '';
             
@@ -805,10 +814,9 @@
                 lucide.createIcons();
             }
             
-            // 綁定事件：避免重複綁定，採用匿名函數包裹
+            // 綁定事件
             if (!window.hasBoundEvents) {
                 document.addEventListener('keydown', (e) => {
-                    // 若焦點在輸入框內，不觸發翻頁
                     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
                     if(e.key === 'ArrowRight' || e.key === 'ArrowDown') nextPage();
                     if(e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevPage();
@@ -823,12 +831,10 @@
                 document.getElementById('searchInput').addEventListener('input', handleSearch);
                 window.addEventListener('resize', handleResize);
                 
-                // 行動端滾動追蹤
                 const mobileView = document.getElementById('mobile-view');
                 if (mobileView) {
                     mobileView.addEventListener('scroll', () => {
                         if (isScrollingProgrammatically) return;
-                        
                         let currentIdx = currentPage;
                         let minDistance = Infinity;
                         const viewScrollTop = mobileView.scrollTop;
@@ -847,7 +853,7 @@
                         if (currentIdx !== currentPage) {
                             currentPage = currentIdx;
                             updateUI();
-                            localStorage.setItem('summitBookProgressPage', currentPage);
+                            try { localStorage.setItem('summitBookProgressPage', currentPage); } catch(e){}
                         }
                     });
                 }
@@ -861,12 +867,13 @@
         }
 
         // ====== 升級版：AI 添加案例功能 ======
-        const apiKey = "AIzaSyANucIS9hkp62_4VAQIefQf-3GmOZ95Yc4"; // 已為您填入您的真實 API Key
+        // 🚨 請在這裡填入您最新申請的 Google Gemini API Key
+        const apiKey = "AIzaSyANucIS9hkp62_4VAQIefQf-3GmOZ95Yc4"; 
 
         function openAddCaseModal() {
             const backdrop = document.getElementById('add-case-backdrop');
             const content = document.getElementById('add-case-content');
-            document.getElementById('raw-case-content').value = ''; // 清空內容
+            document.getElementById('raw-case-content').value = ''; 
             backdrop.style.opacity = '1';
             backdrop.style.pointerEvents = 'auto';
             content.style.transform = 'scale(1) translateY(0)';
@@ -886,6 +893,11 @@
             const rawText = document.getElementById('raw-case-content').value.trim();
             if (!rawText) return;
 
+            if (!apiKey) {
+                alert("⛔ 尚未配置 API Key！請在 index.html 第 746 行填入您的 Google API Key。");
+                return;
+            }
+
             // UI 狀態切換為 Loading
             const submitBtn = document.getElementById('ai-submit-btn');
             const btnText = document.getElementById('btn-text');
@@ -898,19 +910,14 @@
             closeBtn.disabled = true;
             textArea.disabled = true;
             submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
-            btnText.innerHTML = 'AI 思考中... <i class="animate-spin" data-lucide="loader-2" style="display:inline-block; width:16px; height:16px;"></i>';
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
+            btnText.innerHTML = 'AI 深度分析中... <i class="animate-spin" data-lucide="loader-2" style="display:inline-block; width:16px; height:16px;"></i>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
 
             try {
                 const resultJSON = await processCaseWithGemini(rawText);
                 
-                if(!resultJSON || !resultJSON.id) {
-                    throw new Error("AI 解析失敗，請重試");
-                }
+                if(!resultJSON || !resultJSON.id) throw new Error("AI 返回內容有誤，請重試");
 
-                // 加入案例庫
                 caseStudies[resultJSON.id] = { 
                     title: `${resultJSON.id}：${resultJSON.title}`, 
                     content: resultJSON.content 
@@ -919,7 +926,6 @@
                 const target = String(resultJSON.target);
 
                 if (target === 'new') {
-                    // 新增一頁書本內容
                     const newPage = {
                         title: `${resultJSON.id}：${resultJSON.title}`,
                         html: `
@@ -927,9 +933,7 @@
                                 <i data-lucide="bookmark" class="text-summit-gold w-6 h-6"></i>
                                 <h2 class="text-2xl font-bold text-summit-dark mb-0">${resultJSON.id}：${resultJSON.title}</h2>
                             </div>
-                            <div class="space-y-4 text-slate-700 leading-relaxed">
-                                ${resultJSON.content}
-                            </div>
+                            <div class="space-y-4 text-slate-700 leading-relaxed">${resultJSON.content}</div>
                         `
                     };
                     bookData.splice(bookData.length - 1, 0, newPage);
@@ -938,12 +942,11 @@
                     initBook();
                     goToPage(totalPages - 2); 
                 } else {
-                    // 附加按鈕到現有頁面 (確保索引有效)
                     const pageIdx = parseInt(target);
                     if (!isNaN(pageIdx) && bookData[pageIdx]) {
                         const buttonHTML = `
                             <div class="pt-6 border-t border-slate-200 mt-6">
-                                <strong>新增 AI 智能案例擴展：</strong><br>
+                                <strong>🆕 新增 AI 智能案例擴展：</strong><br>
                                 <button class="case-btn" onclick="handleCaseClick('${resultJSON.id}')"><i data-lucide="book-open" class="w-4 h-4 mr-2"></i> 查看 ${resultJSON.id}：${resultJSON.title}</button>
                             </div>
                         `;
@@ -951,7 +954,7 @@
                         initBook();
                         goToPage(pageIdx);
                     } else {
-                        // fallback: 如果 AI 給了奇怪的數字，就作為新頁
+                        // 如果歸類失敗則強迫建新頁
                         const newPage = {
                             title: `${resultJSON.id}：${resultJSON.title}`,
                             html: `<div class="flex items-center gap-3 mb-6"><h2 class="text-2xl font-bold text-summit-dark mb-0">${resultJSON.id}：${resultJSON.title}</h2></div><div class="space-y-4 text-slate-700">${resultJSON.content}</div>`
@@ -966,7 +969,7 @@
                 closeAddCaseModal();
             } catch (error) {
                 console.error("AI 處理錯誤:", error);
-                alert("抱歉，AI 處理案例時發生錯誤。\n\n詳細原因：" + error.message + "\n\n💡 提示：如果您是將檔案下載到自己電腦上執行，請確保已在代碼第 730 行的 `const apiKey = \"\";` 中填寫您的 Google Gemini API Key。");
+                alert("抱歉，AI 處理案例時發生錯誤。\n\n詳細原因：" + error.message);
             } finally {
                 // 恢復 UI 狀態
                 submitBtn.disabled = false;
@@ -975,13 +978,11 @@
                 textArea.disabled = false;
                 submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
                 btnText.innerHTML = 'AI 智能分析並寫入';
-                if (typeof lucide !== 'undefined') {
-                    lucide.createIcons();
-                }
+                if (typeof lucide !== 'undefined') lucide.createIcons();
             }
         }
 
-        // 呼叫 Gemini API 進行智能分析
+        // 【修復崩潰點 2】智能多模型引擎與防護
         async function processCaseWithGemini(text) {
             const systemPrompt = `你是一個資深的家族財富規劃架構師。
 請分析使用者提供的案例內容，進行提煉與分類，並嚴格以 JSON 格式返回。
@@ -998,35 +999,38 @@
 "13" = 第7-8章 法律稅務與金融工具
 "new" = 其他完全無法歸類的案例`;
 
-            const payload = {
-                contents: [{ parts: [{ text: text }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            id: { type: "STRING" },
-                            title: { type: "STRING" },
-                            content: { type: "STRING" },
-                            target: { type: "STRING" }
-                        },
-                        required: ["id", "title", "content", "target"]
-                    }
-                }
-            };
-
+            // 將最高級的 2.5 系列放在第一順位，同時保留安全降級策略
             const modelsToTry = [
-                "gemini-2.5-flash-preview-09-2025", 
-                "gemini-2.0-flash",
-                "gemini-1.5-flash-latest",
-                "gemini-1.5-flash"
+                "gemini-2.5-flash",
+                "gemini-1.5-flash",
+                "gemini-1.5-pro",
+                "gemini-pro"
             ];
 
             let lastErrorMsg = "";
 
             for (const model of modelsToTry) {
                 try {
+                    let payload = { contents: [{ parts: [{ text: text }] }] };
+                    
+                    if (model !== "gemini-pro") {
+                        payload.systemInstruction = { parts: [{ text: systemPrompt }] };
+                        payload.generationConfig = {
+                            responseMimeType: "application/json",
+                            responseSchema: {
+                                type: "OBJECT",
+                                properties: {
+                                    id: { type: "STRING" },
+                                    title: { type: "STRING" },
+                                    content: { type: "STRING" },
+                                    target: { type: "STRING" }
+                                }
+                            }
+                        };
+                    } else {
+                        payload.contents[0].parts[0].text = systemPrompt + "\n\n【用戶案例內容】：\n" + text + "\n\n⚠️ 重要：請務必只返回合法的 JSON 格式字串，不要包含 ```json 等任何 Markdown 標記！";
+                    }
+
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1036,12 +1040,7 @@
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({}));
                         lastErrorMsg = errorData.error?.message || `HTTP 狀態碼 ${response.status}`;
-                        
-                        if (response.status === 404) {
-                            console.warn(`[自動降級] 您的帳號不支援模型 ${model}，系統自動切換下一個...`);
-                            continue; 
-                        }
-                        
+                        if (response.status === 404) continue; // 模型不存在，直接換下一個
                         throw new Error(`API 拒絕請求 (${response.status}): ${lastErrorMsg}`);
                     }
 
@@ -1049,56 +1048,35 @@
                     let resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
                     
                     if (resultText) {
+                        // 強制淨化 AI 返回的字串，抓取最外層的 { } 避免 JSON 解析崩潰
                         resultText = resultText.replace(/^```json/mi, '').replace(/```/g, '').trim();
+                        const firstBrace = resultText.indexOf('{');
+                        const lastBrace = resultText.lastIndexOf('}');
+                        if (firstBrace !== -1 && lastBrace !== -1) {
+                            resultText = resultText.substring(firstBrace, lastBrace + 1);
+                        }
                         return JSON.parse(resultText); 
                     }
                 } catch (error) {
                     console.warn(`模型 ${model} 連線異常:`, error);
-                    
-                    // 精準攔截「網路被阻擋」的錯誤
                     if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                        lastErrorMsg = "網路連線失敗 (Failed to fetch)。\n👉 這是因為您目前的網路環境無法直接連線到 Google 伺服器。如果您在大陸或香港，請確認您的 VPN 已開啟「全局代理 (Global Proxy)」模式，否則瀏覽器會攔截請求。";
-                        break; // 網路不通的話，測再多模型也沒用，直接跳出
+                        lastErrorMsg = "網路連線失敗 (Failed to fetch)。\n👉 請確認您的網路代理/VPN 已開啟「全局代理 (Global)」模式。";
+                        break; 
                     } else {
                         lastErrorMsg = error.message;
                     }
                 }
             }
             
-            // 拋出明確的錯誤提示
             throw new Error(lastErrorMsg);
         }
-                        
-                        // 若是配額不足或其他錯誤，拋出異常
-                        throw new Error(`API 錯誤 ${response.status}: ${lastErrorMsg}`);
-                    }
 
-                    const data = await response.json();
-                    let resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    
-                    if (resultText) {
-                        // 成功！清除雜訊並解析 JSON
-                        resultText = resultText.replace(/^```json/mi, '').replace(/```/g, '').trim();
-                        return JSON.parse(resultText); 
-                    }
-                } catch (error) {
-                    console.warn(`模型 ${model} 連線異常:`, error);
-                    lastErrorMsg = error.message;
-                    // 如果是 JSON 解析失敗等異常，我們一樣嘗試下一個模型
-                }
-            }
-            
-            // 如果陣列裡的所有模型都陣亡了，才把最後的錯誤告訴使用者
-            throw new Error(`無法找到您帳號支援的 AI 模型，請確認 API Key 是否有效。詳細錯誤: ${lastErrorMsg}`);
-        }
-
-        // ====== 自適應重算機制 ======
+        // ====== 視窗自適應與比例重算機制 ======
         function handleResize() {
             const wasMobile = isMobileMode();
             checkDeviceMode();
             const isMobileNow = isMobileMode();
 
-            // 如果因為旋轉螢幕或調整視窗導致模式改變，強制重新歸位
             if (wasMobile !== isMobileNow) {
                 goToPage(currentPage);
             }
@@ -1172,7 +1150,7 @@
                     setTimeout(() => isScrollingProgrammatically = false, 600);
                 }
                 updateUI();
-                localStorage.setItem('summitBookProgressPage', currentPage);
+                try { localStorage.setItem('summitBookProgressPage', currentPage); } catch(e){}
             } else {
                 updateBookTransform();
             }
@@ -1209,14 +1187,15 @@
             }
 
             const bookEl = document.getElementById('book');
-            bookEl.style.transform = `scale(${currentScale}) translateX(${translateX}%)`;
+            if(bookEl) {
+                bookEl.style.transform = `scale(${currentScale}) translateX(${translateX}%)`;
+            }
 
             updateUI();
             if (didFlip) playFlipSound();
-            localStorage.setItem('summitBookProgressPage', currentPage);
+            try { localStorage.setItem('summitBookProgressPage', currentPage); } catch(e){}
         }
 
-        // ====== 解除限制的比例計算引擎 ======
         function scaleBook() {
             if (isMobileMode()) return; 
             
@@ -1229,7 +1208,8 @@
             const scaleX = availableWidth / effectiveBookWidth;
             const scaleY = availableHeight / bookHeight;
             
-            currentScale = Math.min(scaleX, scaleY);
+            // 加入安全範圍，避免縮放比例變成異常負數或 NaN 導致不可見
+            currentScale = Math.max(Math.min(scaleX, scaleY), 0.1); 
 
             updateBookTransform();
         }
@@ -1248,7 +1228,7 @@
                     `;
                 }
             });
-            tocNav.innerHTML = tocHTML;
+            if(tocNav) tocNav.innerHTML = tocHTML;
 
             const inBookTOCs = document.querySelectorAll('.page-toc-content-placeholder');
             if(inBookTOCs.length > 0) {
@@ -1270,8 +1250,10 @@
 
         function updateUI() {
             const percentage = Math.round((currentPage / (totalPages - 1)) * 100);
-            document.getElementById('page-indicator').textContent = `閱讀進度: ${percentage}%`;
-            document.getElementById('progress-slider').value = percentage;
+            const pageIndicator = document.getElementById('page-indicator');
+            if(pageIndicator) pageIndicator.textContent = `閱讀進度: ${percentage}%`;
+            const progressSlider = document.getElementById('progress-slider');
+            if(progressSlider) progressSlider.value = percentage;
         }
 
         function handleSearch(e) {
@@ -1296,7 +1278,10 @@
             });
         }
 
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        function toggleSidebar() { 
+            const sb = document.getElementById('sidebar');
+            if(sb) sb.classList.toggle('open'); 
+        }
 
         function handleTermClick(term) {
             if(knowledgeBase[term]) showModal(`名詞解釋：${term}`, `<p>${knowledgeBase[term]}</p>`);
@@ -1309,7 +1294,10 @@
             document.getElementById('modal-body').innerHTML = body;
             document.getElementById('modal-backdrop').classList.add('active');
         }
-        function hideModal() { document.getElementById('modal-backdrop').classList.remove('active'); }
+        function hideModal() { 
+            const backdrop = document.getElementById('modal-backdrop');
+            if(backdrop) backdrop.classList.remove('active'); 
+        }
         function closeModal(e) { if (e.target.id === 'modal-backdrop') hideModal(); }
 
         let soundEnabled = true;
@@ -1317,9 +1305,9 @@
         function toggleSound() {
             soundEnabled = !soundEnabled;
             const icon = document.querySelector('#soundBtn i');
-            icon.setAttribute('data-lucide', soundEnabled ? 'volume-2' : 'volume-x');
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
+            if(icon) {
+                icon.setAttribute('data-lucide', soundEnabled ? 'volume-2' : 'volume-x');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
             }
         }
         function playFlipSound() {
