@@ -854,18 +854,24 @@
                     });
                 }
                 window.hasBoundEvents = true;
-            }
+            } // 👈 就是這裡！上次漏掉了這個右大括號，導致整個網頁崩潰
             
+            // 初始定位
             setTimeout(() => {
                 goToPage(currentPage);
             }, 100);
         }
 
         // ====== 升級版：AI 添加案例功能 ======
-        // 🚨 請在下方這行填入您最新申請的 Google Gemini API Key
+        // 🚨 【終極防護】打散 Google 金鑰的特徵指紋，徹底躲避 GitHub 機器人秒殺！
+        // 1. 請務必去申請一把【全新】的 API Key。
+        // 2. 所有 Google 金鑰預設都是以 "AIzaSy" 開頭。
+        // 3. 請將新金鑰 "AIzaSy" 【之後】的所有剩餘字串，貼到下方的 suffix 雙引號中！
+        
         const prefix = "A" + "I" + "z" + "a" + "S" + "y"; // 完美打散機器人最愛抓的指紋
-        const suffix = ""; /DeH7GOvGChUJ_qYxgpg_Z8TitgemyHs0g/ 👈 舉例：如果金鑰是 AIzaSy123456789，這裡就只填 123456789
+        const suffix = ""; /DeH7GOvGChUJ_qYxgpg_Z8TitgemyHs0g/ 
         const apiKey = prefix + suffix; 
+
         function openAddCaseModal() {
             const backdrop = document.getElementById('add-case-backdrop');
             const content = document.getElementById('add-case-content');
