@@ -241,7 +241,6 @@
 
     <audio id="flip-sound" src="https://assets.mixkit.co/active_storage/sfx/2092/2092-preview.mp3" preload="auto"></audio>
 
-    <!-- 頂部導航/工具欄 -->
     <header class="fixed top-0 left-0 right-0 h-16 bg-summit-dark/80 backdrop-blur-md border-b border-summit-gold/20 z-40 flex items-center justify-between px-4 sm:px-6 shadow-lg">
         <div class="flex items-center gap-4">
             <button onclick="window.toggleSidebar()" class="text-summit-gold hover:text-white transition p-2 rounded-lg hover:bg-white/10">
@@ -268,15 +267,13 @@
         </div>
     </header>
 
-    <!-- 側邊目錄欄 -->
     <aside id="sidebar" class="fixed top-0 left-0 h-full w-80 bg-slate-900 border-r border-slate-700 z-50 shadow-2xl flex flex-col pt-16">
         <div class="p-6 flex-1 overflow-y-auto">
             <h2 class="text-summit-gold text-lg font-bold mb-6 flex items-center gap-2">
                 <i data-lucide="list"></i> 完整目錄
             </h2>
             <nav id="toc-container" class="space-y-1 text-sm text-slate-300">
-                <!-- 目錄將由 JS 動態生成 -->
-            </nav>
+                </nav>
         </div>
         <div class="p-4 border-t border-slate-700">
             <button onclick="window.toggleSidebar()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white rounded transition flex justify-center items-center gap-2">
@@ -285,35 +282,29 @@
         </div>
     </aside>
 
-    <!-- 桌面端主視覺區：3D 書本 -->
     <main id="scene">
         <div id="book">
-            <!-- 書頁將由 JS 動態生成 -->
-        </div>
+            </div>
     </main>
 
-    <!-- 行動端主視覺區：優雅的卡片式連續滾動 -->
-    <main id="mobile-view" class="w-full h-full pt-20 pb-28 px-4 overflow-y-auto bg-slate-100 scroll-smooth relative">
+    <main id="mobile-view" class="w-full h-full pt-20 pb-20 px-4 overflow-y-auto bg-slate-100 scroll-smooth relative">
         <div id="mobile-pages-container" class="flex flex-col w-full max-w-2xl mx-auto">
-            <!-- 手機版頁面將由 JS 動態生成 -->
-        </div>
+            </div>
     </main>
 
-    <!-- 底部控制欄 -->
-    <footer class="fixed bottom-0 left-0 right-0 bg-summit-dark/90 backdrop-blur-md border-t border-summit-gold/20 z-40 p-3 sm:p-4 flex items-center justify-center sm:justify-between flex-wrap gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-        <div class="flex items-center gap-2 sm:gap-4">
-            <button onclick="window.goToPage(0)" class="text-slate-400 hover:text-summit-gold p-2" title="回封面"><i data-lucide="chevrons-left"></i></button>
-            <button onclick="window.prevPage()" class="bg-slate-800 hover:bg-slate-700 text-summit-gold border border-summit-gold/30 px-4 py-2 rounded flex items-center gap-2 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i> 上一頁</button>
-            <button onclick="window.nextPage()" class="bg-summit-gold hover:bg-yellow-500 text-slate-900 font-bold px-4 py-2 rounded flex items-center gap-2 transition">下一頁 <i data-lucide="chevron-right" class="w-4 h-4"></i></button>
-            <button onclick="window.goToPage(window.totalPages - 1)" class="text-slate-400 hover:text-summit-gold p-2" title="至封底"><i data-lucide="chevrons-right"></i></button>
+    <footer class="fixed bottom-0 left-0 right-0 bg-summit-dark/90 backdrop-blur-md border-t border-summit-gold/20 z-40 py-2 px-3 sm:px-4 flex items-center justify-center sm:justify-between flex-wrap gap-2 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+        <div class="flex items-center gap-1 sm:gap-3">
+            <button onclick="window.goToPage(0)" class="text-slate-400 hover:text-summit-gold p-1.5" title="回封面"><i data-lucide="chevrons-left" class="w-4 h-4"></i></button>
+            <button onclick="window.prevPage()" class="bg-slate-800 hover:bg-slate-700 text-summit-gold border border-summit-gold/30 px-3 py-1.5 text-sm rounded flex items-center gap-1.5 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i> 上一頁</button>
+            <button onclick="window.nextPage()" class="bg-summit-gold hover:bg-yellow-500 text-slate-900 font-bold px-3 py-1.5 text-sm rounded flex items-center gap-1.5 transition">下一頁 <i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+            <button onclick="window.goToPage(window.totalPages - 1)" class="text-slate-400 hover:text-summit-gold p-1.5" title="至封底"><i data-lucide="chevrons-right" class="w-4 h-4"></i></button>
         </div>
-        <div class="flex items-center gap-4 w-full sm:w-auto">
-            <span class="text-slate-400 text-sm hidden sm:inline whitespace-nowrap" id="page-indicator">進度: 0%</span>
-            <input type="range" id="progress-slider" min="0" max="100" value="0" class="w-full sm:w-48 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-summit-gold">
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+            <span class="text-slate-400 text-xs hidden sm:inline whitespace-nowrap" id="page-indicator">進度: 0%</span>
+            <input type="range" id="progress-slider" min="0" max="100" value="0" class="w-full sm:w-40 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-summit-gold">
         </div>
     </footer>
 
-    <!-- 案例展示模態框 -->
     <div id="modal-backdrop" class="fixed inset-0 bg-black/80 z-[100] flex justify-center items-center p-4 backdrop-blur-sm" onclick="window.closeModal(event)">
         <div id="modal-content" class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative" onclick="event.stopPropagation()">
             <div class="bg-slate-900 p-4 flex justify-between items-center border-b border-summit-gold/30">
@@ -326,7 +317,6 @@
         </div>
     </div>
 
-    <!-- 升級：AI 智能導入新案例表單模態框 -->
     <div id="add-case-backdrop" class="fixed inset-0 bg-black/80 z-[110] flex justify-center items-center p-4 backdrop-blur-sm" style="opacity: 0; pointer-events: none; transition: opacity 0.3s ease;" onclick="window.closeAddCaseModal(event)">
         <div id="add-case-content" class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative" style="transform: scale(0.95) translateY(10px); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);" onclick="event.stopPropagation()">
             <div class="bg-slate-900 p-4 flex justify-between items-center border-b border-summit-gold/30">
@@ -359,7 +349,6 @@
         </div>
     </div>
 
-    <!-- 同步代碼提示模態框 (降級回退機制) -->
     <div id="sync-code-backdrop" class="fixed inset-0 bg-black/80 z-[120] flex justify-center items-center p-4 backdrop-blur-sm" style="opacity: 0; pointer-events: none; transition: opacity 0.3s ease;" onclick="window.closeSyncModal(event)">
         <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden relative" style="transform: scale(0.95) translateY(10px); transition: all 0.3s;" onclick="event.stopPropagation()">
             <div class="bg-slate-900 p-4 flex justify-between items-center border-b border-summit-gold/30">
@@ -393,7 +382,6 @@
         </div>
     </div>
 
-    <!-- 🔥 核心模塊：引入 Firebase 與應用邏輯 -->
     <script type="module">
         // 導入 Firebase 模組
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -1031,6 +1019,8 @@
             
             onSnapshot(casesRef, (snapshot) => {
                 let hasNewData = false;
+                let jumpTargetIdx = null; // 💡 紀錄應該跳轉到哪一頁
+                
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
                         const data = change.doc.data();
@@ -1038,6 +1028,17 @@
                         if (!window.caseStudies[data.id]) {
                             hasNewData = true;
                             integrateCaseToBook(data, false); 
+                            
+                            // 💡 計算這個新案例被安插在哪一頁
+                            const target = String(data.target);
+                            const pageIdx = parseInt(target);
+                            if (target === 'new' || isNaN(pageIdx) || !window.bookData[pageIdx]) {
+                                // 如果是建立新的一頁，由於已經執行過 integrateCaseToBook，新頁面會被放在倒數第二頁
+                                jumpTargetIdx = window.bookData.length - 2;
+                            } else {
+                                // 如果是添加到既有的章節
+                                jumpTargetIdx = pageIdx;
+                            }
                         }
                     }
                 });
@@ -1047,6 +1048,13 @@
                     window.totalPages = window.bookData.length;
                     window.totalSheets = Math.ceil(window.totalPages / 2);
                     window.initBook();
+                    
+                    // 💡 如果有新頁面，自動執行精準跳轉
+                    if (jumpTargetIdx !== null) {
+                        setTimeout(() => {
+                            window.goToPage(jumpTargetIdx);
+                        }, 300); // 稍微延遲 0.3 秒，讓畫面動畫更平滑流暢
+                    }
                 }
             }, (error) => {
                 console.error("雲端同步發生錯誤:", error);
@@ -1169,8 +1177,7 @@
                     const docRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'summit_cases'), resultJSON.id);
                     await setDoc(docRef, resultJSON);
                     
-                    alert("✅ 案例已成功分析，並已【自動儲存至雲端】！\n您的手機及所有設備將會即時同步！");
-                    window.closeAddCaseModal();
+                    window.closeAddCaseModal(); // 雲端監聽器會接手後續的重新渲染和跳轉動作！
                 } else {
                     // 若沒有雲端環境 (例如下載到個人伺服器)，退回手動整合並顯示手動同步彈窗
                     integrateCaseToBook(resultJSON, true);
