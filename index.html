@@ -305,7 +305,8 @@
             <button onclick="goToPage(0)" class="text-slate-400 hover:text-summit-gold p-2" title="回封面"><i data-lucide="chevrons-left"></i></button>
             <button onclick="prevPage()" class="bg-slate-800 hover:bg-slate-700 text-summit-gold border border-summit-gold/30 px-4 py-2 rounded flex items-center gap-2 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i> 上一頁</button>
             <button onclick="nextPage()" class="bg-summit-gold hover:bg-yellow-500 text-slate-900 font-bold px-4 py-2 rounded flex items-center gap-2 transition">下一頁 <i data-lucide="chevron-right" class="w-4 h-4"></i></button>
-            <button onclick="goToPage(totalPages - 1)" class="text-slate-400 hover:text-summit-gold p-2" title="至封底"><i data-lucide="chevrons-right"></i></button>
+            <!-- 🚨 此處已修復，使用 window.totalPages 確保按鈕不會出錯 -->
+            <button onclick="goToPage(window.totalPages - 1)" class="text-slate-400 hover:text-summit-gold p-2" title="至封底"><i data-lucide="chevrons-right"></i></button>
         </div>
         <div class="flex items-center gap-4 w-full sm:w-auto">
             <span class="text-slate-400 text-sm hidden sm:inline whitespace-nowrap" id="page-indicator">進度: 0%</span>
@@ -339,7 +340,6 @@
                     <p>只需貼上原始案例文本，AI 將為您提煉包含<strong>「人物畫像、痛點、解決方案」</strong>的專業結構。若雲端同步開啟，手機將即時看見更新。</p>
                 </div>
                 
-                <!-- 🚀 終極解決方案：直接在 UI 輸入金鑰，永遠不寫在代碼裡！ -->
                 <div class="bg-slate-50 border border-slate-200 p-3 rounded-lg">
                     <label class="block text-sm font-bold text-slate-700 mb-1">您的 Google Gemini API Key <span class="text-xs text-red-500 font-normal ml-2">(*必填)</span></label>
                     <input type="password" id="api-key-input" placeholder="請貼上完整的 API Key (以 AIzaSy 開頭)..." required class="w-full border border-slate-300 rounded p-2 focus:outline-none focus:border-summit-gold text-sm font-mono">
@@ -775,7 +775,6 @@
         // ==========================================
         // ☁️ Firebase 雲端資料庫模組與同步邏輯
         // ==========================================
-        // 🚨 1. 將這裡強制改為 true，開啟您專屬的雲端
         const isCloudEnabled = true; 
         let app, auth, db, appId, currentUser = null;
 
@@ -783,7 +782,7 @@
             // 讓左上角的「雲端同步」指示器亮起
             document.getElementById('cloud-status-indicator').classList.remove('hidden');
 
-            // 🚨 2. 這是您專屬的雲端設定
+            // 您專屬的 Firebase 配置
             const firebaseConfig = {
                 apiKey: "AIzaSyA03LZlxmxVIaIspaUN8DXW4lkFClVCZWU",
                 authDomain: "summit-book-85965.firebaseapp.com",
@@ -809,7 +808,7 @@
             };
             initAuth();
 
-            // 監聽登入狀態並加載資料 (🚨 下面是被我不小心截斷，現在已經修復補齊的代碼！)
+            // 監聽登入狀態並加載資料
             onAuthStateChanged(auth, (user) => {
                 currentUser = user;
                 if (user) {
@@ -1312,10 +1311,11 @@
             }, 2000);
         };
 
-        window.onload = () => {
-            checkDeviceMode();
-            initBook();
-        };
+        // 🚨 關鍵修復：因為使用了 type="module" (非同步載入)，不能再用 window.onload
+        // 這裡強制直接執行，DOM 這時候一定已經載入完畢了，保證書本瞬間繪製！
+        checkDeviceMode();
+        initBook();
+
     </script>
 </body>
 </html>
