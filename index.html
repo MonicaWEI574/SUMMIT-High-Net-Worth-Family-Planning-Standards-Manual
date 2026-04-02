@@ -398,7 +398,7 @@
     <script type="module">
         // 導入 Firebase 模組
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // 知識庫與案例數據
@@ -775,33 +775,41 @@
         // ==========================================
         // ☁️ Firebase 雲端資料庫模組與同步邏輯
         // ==========================================
-        const isCloudEnabled = typeof window.__firebase_config !== 'undefined';
+        // 🚨 1. 將這裡強制改為 true，開啟您專屬的雲端
+        const isCloudEnabled = true; 
         let app, auth, db, appId, currentUser = null;
 
         if (isCloudEnabled) {
             // 讓左上角的「雲端同步」指示器亮起
             document.getElementById('cloud-status-indicator').classList.remove('hidden');
 
-            const firebaseConfig = JSON.parse(window.__firebase_config);
+            // 🚨 2. 這是您專屬的雲端設定
+            const firebaseConfig = {
+                apiKey: "AIzaSyA03LZlxmxVIaIspaUN8DXW4lkFClVCZWU",
+                authDomain: "summit-book-85965.firebaseapp.com",
+                projectId: "summit-book-85965",
+                storageBucket: "summit-book-85965.firebasestorage.app",
+                messagingSenderId: "381397304163",
+                appId: "1:381397304163:web:52c59756529a0e6ccc4956",
+                measurementId: "G-3LDJK32Q74"
+            };
+
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
-            appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
+            appId = 'summit-handbook'; // 固定一個資料夾名稱
 
             const initAuth = async () => {
                 try {
-                    if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
-                        await signInWithCustomToken(auth, window.__initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                    // 使用匿名登入，讓您的手機和電腦連上網頁時自動擁有讀寫權限
+                    await signInAnonymously(auth);
                 } catch (error) {
-                    console.error("Firebase Auth Error:", error);
+                    console.error("Firebase 登入失敗:", error);
                 }
             };
             initAuth();
 
-            // 監聽登入狀態並加載資料
+            // 監聽登入狀態並加載資料 (🚨 下面是被我不小心截斷，現在已經修復補齊的代碼！)
             onAuthStateChanged(auth, (user) => {
                 currentUser = user;
                 if (user) {
@@ -823,7 +831,7 @@
                         // 確保本地還沒有這個案例才加入
                         if (!window.caseStudies[data.id]) {
                             hasNewData = true;
-                            integrateCaseToBook(data, false); // false = 先不重新渲染，等全部加完再一次
+                            integrateCaseToBook(data, false); 
                         }
                     }
                 });
@@ -890,184 +898,43 @@
             }
         }
 
-        // ====== 雙模式比例引擎 ======
-        function checkDeviceMode() {
-            const isMobile = window.innerWidth <= 850 || window.innerHeight > window.innerWidth;
-            if (isMobile) {
-                document.body.classList.add('mobile-mode');
-                document.body.classList.remove('desktop-mode');
-            } else {
-                document.body.classList.add('desktop-mode');
-                document.body.classList.remove('mobile-mode');
-            }
-        }
-
-        function isMobileMode() {
-            return document.body.classList.contains('mobile-mode');
-        }
-
-        function initBook() {
-            const bookEl = document.getElementById('book');
-            const mobileContainer = document.getElementById('mobile-pages-container');
-            if (!bookEl) return;
+        // ====== UI 控制與匯出至 Window ======
+        window.openAddCaseModal = function() {
+            const backdrop = document.getElementById('add-case-backdrop');
+            const content = document.getElementById('add-case-content');
+            document.getElementById('raw-case-content').value = ''; 
             
-            bookEl.innerHTML = '';
-            if (mobileContainer) mobileContainer.innerHTML = '';
-            
-            for (let i = 0; i < window.totalSheets; i++) {
-                const sheet = document.createElement('div');
-                sheet.className = 'sheet';
-                sheet.style.zIndex = window.totalSheets - i;
-                sheet.onclick = (e) => handlePageClick(e);
-
-                const fIdx = i * 2;
-                const bIdx = i * 2 + 1;
-
-                const frontHTML = buildPageContent(fIdx);
-                const backHTML = buildPageContent(bIdx, true);
-
-                let coverClassesFront = fIdx === 0 ? 'cover' : '';
-                let coverClassesBack = bIdx === window.totalPages - 1 ? 'cover' : '';
-
-                sheet.innerHTML = `
-                    <div class="face front ${coverClassesFront}">
-                        ${frontHTML}
-                    </div>
-                    <div class="face back ${coverClassesBack}">
-                        ${backHTML}
-                    </div>
-                `;
-                bookEl.appendChild(sheet);
+            const savedKey = localStorage.getItem('summit_gemini_api_key');
+            if (savedKey) {
+                document.getElementById('api-key-input').value = savedKey;
             }
 
-            if (mobileContainer) {
-                for (let i = 0; i < window.totalPages; i++) {
-                    const mobilePage = document.createElement('div');
-                    mobilePage.id = `mobile-page-${i}`;
-                    
-                    mobilePage.onclick = (e) => {
-                        if(e.target.closest('.term-link') || e.target.closest('.case-btn') || e.target.closest('button') || e.target.closest('.toc-link')) return;
-                        const clickX = e.clientX;
-                        const width = window.innerWidth;
-                        if (clickX > width * 0.6) {
-                            nextPage();
-                        } else if (clickX < width * 0.4) {
-                            prevPage();
-                        }
-                    };
+            backdrop.style.opacity = '1';
+            backdrop.style.pointerEvents = 'auto';
+            content.style.transform = 'scale(1) translateY(0)';
+        };
 
-                    const data = window.bookData[i];
-                    let contentHTML = '';
-                    if (data.type === 'cover') {
-                        mobilePage.className = 'mobile-card mobile-card-cover';
-                        contentHTML = `<div class="w-full py-16 flex flex-col items-center justify-center px-6 text-center relative">${data.html}</div>`;
-                    } else {
-                        mobilePage.className = 'mobile-card';
-                        contentHTML = `<div class="mobile-page-inner w-full relative pb-12">
-                            ${data.html}
-                            <div class="absolute bottom-4 left-0 w-full text-center text-xs text-slate-400 font-serif">- 頁碼 ${i} -</div>
-                        </div>`;
-                    }
-                    mobilePage.innerHTML = contentHTML;
-                    mobileContainer.appendChild(mobilePage);
-                }
+        window.closeAddCaseModal = function(e) {
+            if(e) e.stopPropagation();
+            const backdrop = document.getElementById('add-case-backdrop');
+            const content = document.getElementById('add-case-content');
+            backdrop.style.opacity = '0';
+            backdrop.style.pointerEvents = 'none';
+            content.style.transform = 'scale(0.95) translateY(10px)';
+        };
+
+        window.submitAddCaseAI = async function(e) {
+            e.preventDefault();
+            const rawText = document.getElementById('raw-case-content').value.trim();
+            const apiKeyInput = document.getElementById('api-key-input').value.trim();
+
+            if (!rawText) return;
+            
+            if (!apiKeyInput || !apiKeyInput.startsWith("AIzaSy")) {
+                alert("⛔ API Key 格式不正確！請確認您貼上的是以 AIzaSy 開頭的完整金鑰。");
+                return;
             }
 
-            buildTOC();
-            scaleBook();
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-            
-            if (!window.hasBoundEvents) {
-                document.addEventListener('keydown', (e) => {
-                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-                    if(e.key === 'ArrowRight' || e.key === 'ArrowDown') nextPage();
-                    if(e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevPage();
-                });
-
-                document.getElementById('progress-slider').addEventListener('input', (e) => {
-                    const val = parseInt(e.target.value);
-                    const targetPage = Math.round((val / 100) * (window.totalPages - 1));
-                    goToPage(targetPage);
-                });
-
-                document.getElementById('searchInput').addEventListener('input', handleSearch);
-                window.addEventListener('resize', handleResize);
-                
-                const mobileView = document.getElementById('mobile-view');
-                if (mobileView) {
-                    mobileView.addEventListener('scroll', () => {
-                        if (isScrollingProgrammatically) return;
-                        let currentIdx = currentPage;
-                        let minDistance = Infinity;
-                        const viewScrollTop = mobileView.scrollTop;
-                        
-                        for (let i = 0; i < window.totalPages; i++) {
-                            const pageEl = document.getElementById(`mobile-page-${i}`);
-                            if (pageEl) {
-                                const distance = Math.abs((pageEl.offsetTop - 80) - viewScrollTop);
-                                if (distance < minDistance) {
-                                    minDistance = distance;
-                                    currentIdx = i;
-                                }
-                            }
-                        }
-                        
-                        if (currentIdx !== currentPage) {
-                            currentPage = currentIdx;
-                            updateUI();
-                            try { localStorage.setItem('summitBookProgressPage', currentPage); } catch(e){}
-                        }
-                    });
-                }
-                window.hasBoundEvents = true;
-            } 
-            
-            setTimeout(() => {
-                goToPage(currentPage);
-            }, 100);
-        }
-
-        // ==========================================
-        // ☁️ Firebase 雲端資料庫模組與同步邏輯
-        // ==========================================
-        // 🚨 1. 將這裡強制改為 true，開啟您專屬的雲端
-        const isCloudEnabled = true; 
-        let app, auth, db, appId, currentUser = null;
-
-        if (isCloudEnabled) {
-            // 讓左上角的「雲端同步」指示器亮起
-            document.getElementById('cloud-status-indicator').classList.remove('hidden');
-
-            // 🚨 2. 將您剛剛在 Firebase 申請到的 firebaseConfig 貼在這裡覆蓋：
-            const firebaseConfig = {
-                apiKey: "AIzaSyA03LZlxmxVIaIspaUN8DXW4lkFClVCZWU",
-                authDomain: "summit-book-85965.firebaseapp.com",
-                projectId: "summit-book-85965",
-                storageBucket: "summit-book-85965.firebasestorage.app",
-                messagingSenderId: "381397304163",
-                appId: "1:381397304163:web:52c59756529a0e6ccc4956",
-                measurementId: "G-3LDJK32Q74"
-            };
-
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            appId = 'summit-handbook'; // 固定一個資料夾名稱
-
-            const initAuth = async () => {
-                try {
-                    // 使用匿名登入，讓您的手機和電腦連上網頁時自動擁有讀寫權限
-                    await signInAnonymously(auth);
-                } catch (error) {
-                    console.error("Firebase 登入失敗:", error);
-                }
-            };
-            initAuth();
-
-            // 監聽登入狀態並加載資料
-            onAuthStateChanged(auth, (user) => {
             localStorage.setItem('summit_gemini_api_key', apiKeyInput);
 
             const submitBtn = document.getElementById('ai-submit-btn');
@@ -1096,7 +963,6 @@
                     const docRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'summit_cases'), resultJSON.id);
                     await setDoc(docRef, resultJSON);
                     
-                    // 雲端的 onSnapshot 監聽器會自動捕捉到改變，並呼叫 integrateCaseToBook 更新畫面
                     alert("✅ 案例已成功分析，並已【自動儲存至雲端】！\n您的手機及所有設備將會即時同步！");
                     window.closeAddCaseModal();
                 } else {
@@ -1212,16 +1078,6 @@
             throw new Error(lastErrorMsg);
         }
 
-        // ====== 視窗自適應與基礎交互機制 ======
-        function handleResize() {
-            const wasMobile = isMobileMode();
-            checkDeviceMode();
-            const isMobileNow = isMobileMode();
-
-            if (wasMobile !== isMobileNow) window.goToPage(currentPage);
-            scaleBook();
-        }
-
         function buildPageContent(index) {
             if (index >= window.totalPages) return '<div class="page-content"></div>';
             const data = window.bookData[index];
@@ -1236,64 +1092,6 @@
             content += `</div>`;
             return content;
         }
-
-        window.handlePageClick = function(e) {
-            if(e.target.closest('.term-link') || e.target.closest('.case-btn') || e.target.closest('button') || e.target.closest('.toc-link')) return;
-            const rect = document.getElementById('scene').getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            if (clickX > rect.width / 2) {
-                window.nextPage();
-            } else {
-                window.prevPage();
-            }
-        };
-
-        window.nextPage = function() {
-            if (isMobileMode()) {
-                window.goToPage(currentPage + 1);
-            } else {
-                if (currentPage + 2 < window.totalPages) {
-                    currentPage += 2;
-                } else {
-                    currentPage = window.totalPages - 1;
-                }
-                updateBookTransform();
-            }
-        };
-
-        window.prevPage = function() {
-            if (isMobileMode()) {
-                window.goToPage(currentPage - 1);
-            } else {
-                if (currentPage - 2 >= 0) {
-                    currentPage -= 2;
-                } else {
-                    currentPage = 0;
-                }
-                updateBookTransform();
-            }
-        };
-
-        window.goToPage = function(pageIndex) {
-            if (pageIndex < 0) pageIndex = 0;
-            if (pageIndex >= window.totalPages) pageIndex = window.totalPages - 1;
-            currentPage = pageIndex;
-            
-            if (isMobileMode()) {
-                const target = document.getElementById(`mobile-page-${pageIndex}`);
-                const mobileView = document.getElementById('mobile-view');
-                if (target && mobileView) {
-                    isScrollingProgrammatically = true;
-                    const y = target.offsetTop - 80;
-                    mobileView.scrollTo({ top: y, behavior: 'smooth' });
-                    setTimeout(() => isScrollingProgrammatically = false, 600);
-                }
-                updateUI();
-                try { localStorage.setItem('summitBookProgressPage', currentPage); } catch(e){}
-            } else {
-                updateBookTransform();
-            }
-        };
 
         function updateBookTransform() {
             if (isMobileMode()) return; 
