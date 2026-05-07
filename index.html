@@ -752,6 +752,7 @@
         let app, auth, db, appId, currentUser = null;
         let soundEnabled = true;
         const flipSound = document.getElementById('flip-sound');
+        window.hasShownPermissionAlert = false;
         
         try {
             const savedProgress = localStorage.getItem('summitBookProgressPage');
@@ -1307,7 +1308,12 @@
 
             } catch (error) {
                 console.error("AI 處理錯誤:", error);
-                alert("抱歉，AI 處理案例時發生錯誤。\n\n詳細原因：" + error.message);
+                // 🛑 針對權限過期的友善提示
+                if (error?.message?.includes('Missing or insufficient permissions') || error?.code === 'permission-denied') {
+                    alert("⚠️ 寫入雲端失敗：Firebase 權限已過期！\n\n請登入 Firebase 後台 -> Firestore Database -> Rules (規則) 頁籤，將規則修改為:\nallow read, write: if true;\n\n然後發布，即可繼續儲存。");
+                } else {
+                    alert("抱歉，發生錯誤。\n\n詳細原因：" + error.message);
+                }
             } finally {
                 submitBtn.disabled = false;
                 cancelBtn.disabled = false;
@@ -1400,57 +1406,6 @@
             throw new Error(lastErrorMsg);
         }
 
-        // 將 AI 生成或雲端下載的案例整合進網頁目錄的邏輯
-        function integrateCaseToBook(resultJSON, shouldInit = true) {
-            window.caseStudies[resultJSON.id] = { 
-                title: `${resultJSON.id}：${resultJSON.title}`, 
-                content: resultJSON.content 
-            };
-
-            const target = String(resultJSON.target);
-
-            if (target === 'new') {
-                const newPage = {
-                    title: `${resultJSON.id}：${resultJSON.title}`,
-                    html: `
-                        <div class="flex items-center gap-3 mb-6">
-                            <i data-lucide="bookmark" class="text-summit-gold w-6 h-6"></i>
-                            <h2 class="text-2xl font-bold text-summit-dark mb-0">${resultJSON.id}：${resultJSON.title}</h2>
-                        </div>
-                        <div class="space-y-4 text-slate-700 leading-relaxed">${resultJSON.content}</div>
-                    `
-                };
-                window.bookData.splice(window.bookData.length - 1, 0, newPage);
-            } else {
-                const pageIdx = parseInt(target);
-                if (!isNaN(pageIdx) && window.bookData[pageIdx]) {
-                    // 防止重複添加相同的按鈕
-                    if (!window.bookData[pageIdx].html.includes(resultJSON.id)) {
-                        const buttonHTML = `
-                            <div class="pt-6 border-t border-slate-200 mt-6">
-                                <strong>🆕 新增 AI 智能案例擴展：</strong><br>
-                                <button class="case-btn" onclick="window.handleCaseClick('${resultJSON.id}')"><i data-lucide="book-open" class="w-4 h-4 mr-2"></i> 查看 ${resultJSON.id}：${resultJSON.title}</button>
-                            </div>
-                        `;
-                        window.bookData[pageIdx].html += buttonHTML;
-                    }
-                } else {
-                    const newPage = {
-                        title: `${resultJSON.id}：${resultJSON.title}`,
-                        html: `<div class="flex items-center gap-3 mb-6"><h2 class="text-2xl font-bold text-summit-dark mb-0">${resultJSON.id}：${resultJSON.title}</h2></div><div class="space-y-4 text-slate-700">${resultJSON.content}</div>`
-                    };
-                    window.bookData.splice(window.bookData.length - 1, 0, newPage);
-                }
-            }
-
-            if (shouldInit) {
-                window.totalPages = window.bookData.length;
-                window.totalSheets = Math.ceil(window.totalPages / 2);
-                window.initBook();
-                window.goToPage(target === 'new' || isNaN(parseInt(target)) ? window.totalPages - 2 : parseInt(target));
-            }
-        }
-
         // 從雲端實時抓取其他設備新增的案例
         function loadCloudData() {
             if (!currentUser || !db) return;
@@ -1497,6 +1452,13 @@
                 }
             }, (error) => {
                 console.error("雲端同步發生錯誤:", error);
+                // 🛑 加入特定的權限錯誤警告
+                if (error.message.includes('Missing or insufficient permissions')) {
+                    if (!window.hasShownPermissionAlert) {
+                        alert("⚠️ 雲端連線被拒絕：Firebase 權限已過期！\n\n因為 Google Firebase 的「測試模式」預設只有 30 天期限，現在已經到期了。\n\n請登入 Firebase 後台：\n1. 進入 Firestore Database\n2. 點擊上方的 Rules (規則) 頁籤\n3. 將裡面的時間限制刪掉，修改為：\nallow read, write: if true;\n4. 點擊 Publish (發布) 即可恢復正常運作！");
+                        window.hasShownPermissionAlert = true;
+                    }
+                }
             });
         }
 
