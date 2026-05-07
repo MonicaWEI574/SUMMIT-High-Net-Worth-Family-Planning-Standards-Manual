@@ -1154,6 +1154,57 @@
             }
         };
 
+        // 將 AI 生成或雲端下載的案例整合進網頁目錄的邏輯 (綁定為全域變數)
+        window.integrateCaseToBook = function(resultJSON, shouldInit = true) {
+            window.caseStudies[resultJSON.id] = { 
+                title: `${resultJSON.id}：${resultJSON.title}`, 
+                content: resultJSON.content 
+            };
+
+            const target = String(resultJSON.target);
+
+            if (target === 'new') {
+                const newPage = {
+                    title: `${resultJSON.id}：${resultJSON.title}`,
+                    html: `
+                        <div class="flex items-center gap-3 mb-6">
+                            <i data-lucide="bookmark" class="text-summit-gold w-6 h-6"></i>
+                            <h2 class="text-2xl font-bold text-summit-dark mb-0">${resultJSON.id}：${resultJSON.title}</h2>
+                        </div>
+                        <div class="space-y-4 text-slate-700 leading-relaxed">${resultJSON.content}</div>
+                    `
+                };
+                window.bookData.splice(window.bookData.length - 1, 0, newPage);
+            } else {
+                const pageIdx = parseInt(target);
+                if (!isNaN(pageIdx) && window.bookData[pageIdx]) {
+                    // 防止重複添加相同的按鈕
+                    if (!window.bookData[pageIdx].html.includes(resultJSON.id)) {
+                        const buttonHTML = `
+                            <div class="pt-6 border-t border-slate-200 mt-6">
+                                <strong>🆕 新增 AI 智能案例擴展：</strong><br>
+                                <button class="case-btn" onclick="window.handleCaseClick('${resultJSON.id}')"><i data-lucide="book-open" class="w-4 h-4 mr-2"></i> 查看 ${resultJSON.id}：${resultJSON.title}</button>
+                            </div>
+                        `;
+                        window.bookData[pageIdx].html += buttonHTML;
+                    }
+                } else {
+                    const newPage = {
+                        title: `${resultJSON.id}：${resultJSON.title}`,
+                        html: `<div class="flex items-center gap-3 mb-6"><h2 class="text-2xl font-bold text-summit-dark mb-0">${resultJSON.id}：${resultJSON.title}</h2></div><div class="space-y-4 text-slate-700">${resultJSON.content}</div>`
+                    };
+                    window.bookData.splice(window.bookData.length - 1, 0, newPage);
+                }
+            }
+
+            if (shouldInit) {
+                window.totalPages = window.bookData.length;
+                window.totalSheets = Math.ceil(window.totalPages / 2);
+                window.initBook();
+                window.goToPage(target === 'new' || isNaN(parseInt(target)) ? window.totalPages - 2 : parseInt(target));
+            }
+        };
+
         window.showSyncModal = function(resultJSON, mode, pageIdx) {
             const backdrop = document.getElementById('sync-code-backdrop');
             const code1El = document.getElementById('code-1');
@@ -1270,6 +1321,10 @@
                 const resultJSON = await processCaseWithGemini(rawText, apiKeyInput);
                 if(!resultJSON || !resultJSON.id) throw new Error("AI 返回內容無法解析為正確格式");
 
+                // 🔥 關鍵修復：為 AI 生成的 ID 加上專屬隨機碼，防止「撞名」導致覆蓋或被隱藏
+                const randomSuffix = Math.floor(Math.random() * 9000) + 1000;
+                resultJSON.id = `${resultJSON.id}-${randomSuffix}`;
+
                 // ☁️ 若啟用了雲端且已連線，將新案例發送到 Firebase 雲端！
                 if (isCloudEnabled) {
                     if (!currentUser) {
@@ -1286,11 +1341,12 @@
                         const docRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'summit_cases'), resultJSON.id);
                         await setDoc(docRef, resultJSON);
                         
+                        alert("✅ 案例已成功分析，並已【自動儲存至雲端】！\n畫面即將為您重新渲染並自動跳轉...");
                         window.closeAddCaseModal(); // 雲端監聽器會接手後續的重新渲染和跳轉動作！
                     }
                 } else {
                     // 若沒有雲端環境 (例如下載到個人伺服器)，退回手動整合並顯示手動同步彈窗
-                    integrateCaseToBook(resultJSON, true);
+                    window.integrateCaseToBook(resultJSON, true);
                     window.closeAddCaseModal();
                     
                     const target = String(resultJSON.target);
@@ -1421,7 +1477,7 @@
                         // 確保本地還沒有這個案例才加入
                         if (!window.caseStudies[data.id]) {
                             hasNewData = true;
-                            integrateCaseToBook(data, false); 
+                            window.integrateCaseToBook(data, false); 
                             
                             // 💡 計算這個新案例被安插在哪一頁
                             const target = String(data.target);
