@@ -393,7 +393,7 @@
         // ==========================================
         
         window.knowledgeBase = {
-            "A類：企業操盤型": "指以企業經營和資本運作為核心的高淨值客戶。這類客戶通常面臨企業經營風險與個人/家族資產混同的痛點，需要強大的風險隔離與資本化升級方案。",
+            "A類：企業操盤型": "指以企業經營和資本運集的為核心的高淨值客戶。這類客戶通常面臨企業經營風險與個人/家族資產混同的痛點，需要強大的風險隔離與資本化升級方案。",
             "家族信託": "一種財富管理架構，委託人將財產所有權轉移給受託人，由受託人按信託契約為指定受益人的利益進行管理和處分，具有資產隔離、稅務籌劃與定向傳承的功能。",
             "家族憲章": "家族成員共同制定並遵守的『家族根本大法』，規範家族價值觀、家族企業治理規則、成員權利義務及衝突解決機制。",
             "CRS": "共同申報準則 (Common Reporting Standard)，用於指導參與管轄區定期交換稅務居民財務帳戶信息的全球標準，對高淨值人士的跨境資產透明度產生重大影響。",
@@ -1154,57 +1154,6 @@
             }
         };
 
-        // 將 AI 生成或雲端下載的案例整合進網頁目錄的邏輯 (綁定為全域變數)
-        window.integrateCaseToBook = function(resultJSON, shouldInit = true) {
-            window.caseStudies[resultJSON.id] = { 
-                title: `${resultJSON.id}：${resultJSON.title}`, 
-                content: resultJSON.content 
-            };
-
-            const target = String(resultJSON.target);
-
-            if (target === 'new') {
-                const newPage = {
-                    title: `${resultJSON.id}：${resultJSON.title}`,
-                    html: `
-                        <div class="flex items-center gap-3 mb-6">
-                            <i data-lucide="bookmark" class="text-summit-gold w-6 h-6"></i>
-                            <h2 class="text-2xl font-bold text-summit-dark mb-0">${resultJSON.id}：${resultJSON.title}</h2>
-                        </div>
-                        <div class="space-y-4 text-slate-700 leading-relaxed">${resultJSON.content}</div>
-                    `
-                };
-                window.bookData.splice(window.bookData.length - 1, 0, newPage);
-            } else {
-                const pageIdx = parseInt(target);
-                if (!isNaN(pageIdx) && window.bookData[pageIdx]) {
-                    // 防止重複添加相同的按鈕
-                    if (!window.bookData[pageIdx].html.includes(resultJSON.id)) {
-                        const buttonHTML = `
-                            <div class="pt-6 border-t border-slate-200 mt-6">
-                                <strong>🆕 新增 AI 智能案例擴展：</strong><br>
-                                <button class="case-btn" onclick="window.handleCaseClick('${resultJSON.id}')"><i data-lucide="book-open" class="w-4 h-4 mr-2"></i> 查看 ${resultJSON.id}：${resultJSON.title}</button>
-                            </div>
-                        `;
-                        window.bookData[pageIdx].html += buttonHTML;
-                    }
-                } else {
-                    const newPage = {
-                        title: `${resultJSON.id}：${resultJSON.title}`,
-                        html: `<div class="flex items-center gap-3 mb-6"><h2 class="text-2xl font-bold text-summit-dark mb-0">${resultJSON.id}：${resultJSON.title}</h2></div><div class="space-y-4 text-slate-700">${resultJSON.content}</div>`
-                    };
-                    window.bookData.splice(window.bookData.length - 1, 0, newPage);
-                }
-            }
-
-            if (shouldInit) {
-                window.totalPages = window.bookData.length;
-                window.totalSheets = Math.ceil(window.totalPages / 2);
-                window.initBook();
-                window.goToPage(target === 'new' || isNaN(parseInt(target)) ? window.totalPages - 2 : parseInt(target));
-            }
-        };
-
         window.showSyncModal = function(resultJSON, mode, pageIdx) {
             const backdrop = document.getElementById('sync-code-backdrop');
             const code1El = document.getElementById('code-1');
@@ -1286,6 +1235,57 @@
             content.style.transform = 'scale(0.95) translateY(10px)';
         };
 
+        // 將 AI 生成或雲端下載的案例整合進網頁目錄的邏輯
+        window.integrateCaseToBook = function(resultJSON, shouldInit = true) {
+            window.caseStudies[resultJSON.id] = { 
+                title: `${resultJSON.id}：${resultJSON.title}`, 
+                content: resultJSON.content 
+            };
+
+            const target = String(resultJSON.target);
+
+            if (target === 'new') {
+                const newPage = {
+                    title: `${resultJSON.id}：${resultJSON.title}`,
+                    html: `
+                        <div class="flex items-center gap-3 mb-6">
+                            <i data-lucide="bookmark" class="text-summit-gold w-6 h-6"></i>
+                            <h2 class="text-2xl font-bold text-summit-dark mb-0">${resultJSON.id}：${resultJSON.title}</h2>
+                        </div>
+                        <div class="space-y-4 text-slate-700 leading-relaxed">${resultJSON.content}</div>
+                    `
+                };
+                window.bookData.splice(window.bookData.length - 1, 0, newPage);
+            } else {
+                const pageIdx = parseInt(target);
+                if (!isNaN(pageIdx) && window.bookData[pageIdx]) {
+                    // 防止重複添加相同的按鈕
+                    if (!window.bookData[pageIdx].html.includes(resultJSON.id)) {
+                        const buttonHTML = `
+                            <div class="pt-6 border-t border-slate-200 mt-6">
+                                <strong>🆕 新增 AI 智能案例擴展：</strong><br>
+                                <button class="case-btn" onclick="window.handleCaseClick('${resultJSON.id}')"><i data-lucide="book-open" class="w-4 h-4 mr-2"></i> 查看 ${resultJSON.id}：${resultJSON.title}</button>
+                            </div>
+                        `;
+                        window.bookData[pageIdx].html += buttonHTML;
+                    }
+                } else {
+                    const newPage = {
+                        title: `${resultJSON.id}：${resultJSON.title}`,
+                        html: `<div class="flex items-center gap-3 mb-6"><h2 class="text-2xl font-bold text-summit-dark mb-0">${resultJSON.id}：${resultJSON.title}</h2></div><div class="space-y-4 text-slate-700">${resultJSON.content}</div>`
+                    };
+                    window.bookData.splice(window.bookData.length - 1, 0, newPage);
+                }
+            }
+
+            if (shouldInit) {
+                window.totalPages = window.bookData.length;
+                window.totalSheets = Math.ceil(window.totalPages / 2);
+                window.initBook();
+                window.goToPage(target === 'new' || isNaN(parseInt(target)) ? window.totalPages - 2 : parseInt(target));
+            }
+        };
+
         window.submitAddCaseAI = async function(e) {
             e.preventDefault();
             const rawText = document.getElementById('raw-case-content').value.trim();
@@ -1320,6 +1320,14 @@
                 // 執行 AI 提煉
                 const resultJSON = await processCaseWithGemini(rawText, apiKeyInput);
                 if(!resultJSON || !resultJSON.id) throw new Error("AI 返回內容無法解析為正確格式");
+
+                // 🔥 終極防呆機制：防止 AI 精神分裂（ID 給 C，target 給 A）
+                // 我們直接根據 AI 給出的 ID 字首，強制校正正確的對應章節頁碼！
+                const upperIdForFix = resultJSON.id.toUpperCase();
+                if (upperIdForFix.includes('案例A')) resultJSON.target = "8";
+                else if (upperIdForFix.includes('案例B')) resultJSON.target = "9";
+                else if (upperIdForFix.includes('案例C')) resultJSON.target = "10";
+                else if (upperIdForFix.includes('案例D')) resultJSON.target = "11";
 
                 // 🔥 關鍵修復：為 AI 生成的 ID 加上專屬隨機碼，防止「撞名」導致覆蓋或被隱藏
                 const randomSuffix = Math.floor(Math.random() * 9000) + 1000;
@@ -1387,7 +1395,7 @@
             const systemPrompt = `你是一個頂級的家族財富規劃架構師。
 請深度吸收、整合使用者提供的原始案例文案，絕不要直接照抄原文，而是將其提煉為結構化、精簡且專業的「標準案例分析」，並嚴格以 JSON 格式返回。
 必須包含以下四個欄位：
-- id: 自動生成一個合適的編號，如 "案例A3", "案例E1"。
+- id: 強制根據分類生成編號字首，如 A類為"案例A3", B類為"案例B1", C類為"案例C2", D類為"案例D1"。
 - title: 提煉出一個精煉的案例標題，不要包含編號。
 - content: 將提煉後的內容排版為 HTML 格式。必須強制包含以下三個核心要素，並使用 <p class='mb-3'> 和 <strong> 標籤進行排版：
   <p class='mb-3'><strong>人物畫像：</strong>（總結客戶的身份背景、企業性質、家庭結構特徵等，專業簡練）</p>
@@ -1474,6 +1482,14 @@
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
                         const data = change.doc.data();
+                        
+                        // 🔥 讀取雲端時同樣套用防呆校正（自動修復您之前被錯置的舊資料！）
+                        const upperId = data.id.toUpperCase();
+                        if (upperId.includes('案例A')) data.target = "8";
+                        else if (upperId.includes('案例B')) data.target = "9";
+                        else if (upperId.includes('案例C')) data.target = "10";
+                        else if (upperId.includes('案例D')) data.target = "11";
+
                         // 確保本地還沒有這個案例才加入
                         if (!window.caseStudies[data.id]) {
                             hasNewData = true;
